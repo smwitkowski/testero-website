@@ -20,3 +20,7 @@ review/
 
 # Opt-in public technical-document snapshots (never commit full page bodies)
 .cache/documentation/
+
+# Local optimizer datasets, prompt packs, traces and verification evidence
+.cache/optimize/
+.cache/optimize-verification/

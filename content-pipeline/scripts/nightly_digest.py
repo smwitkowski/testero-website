@@ -17,6 +17,8 @@ def digest(report):
     return "\n".join([
         "Testero pipeline v6", "Status: " + str(report.get("status", "unknown")),
         "Mode: " + str(report.get("mode", "unknown")),
+        "Generation-only experiment (publishing rules unchanged): " + json.dumps(report.get("generation_experiment", {}), sort_keys=True),
+        "A/B candidate arms (including partial artifacts): " + json.dumps(report.get("ab_batches", []), sort_keys=True),
         "Funnel and coverage: " + json.dumps(report.get("batches", []), sort_keys=True),
         "Weekly paid USD (conservative reservations included): " + json.dumps(report.get("budget", {}).get("weekly_usd")),
         "Observed weekly funnel/cost: " + json.dumps(report.get("weekly_observed", "unavailable"), sort_keys=True),

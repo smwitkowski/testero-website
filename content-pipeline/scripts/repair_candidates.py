@@ -240,7 +240,7 @@ def _repair_one(path, payload, entry, item, summary, lock, stop_event, completed
         child = {key: deepcopy(entry[key]) for key in (
             "cert_id", "domain_code", "objective_id", "guide_sha256", "scenario_moment",
             "opening_style", "question_line", "index", "sources")}
-        for name in ("decision_plan", "decision_proof", "decision_objective", "key_length_rank", "style_policy", "distractor_evidence", "taxonomy"):
+        for name in ("decision_plan", "decision_proof", "decision_objective", "key_length_rank", "style_policy", "distractor_evidence", "doccheck_policy", "taxonomy"):
             if name in entry:
                 child[name] = deepcopy(entry[name])
         if uses_pde_style(scope.get("style_policy")):

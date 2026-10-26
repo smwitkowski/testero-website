@@ -37,7 +37,10 @@ def batch_metrics(artifact, verdicts, publication):
             passed += all(votes)
         except Exception:
             incomplete += 1
-    return {"candidates": len(candidates), "artifact_accepted": sum(e.get("accepted") is True for e in candidates),
+    from shared.batch_report import ab_arm_report
+    return {"ab_arms": ab_arm_report(candidates) if payload.get("ab_experiment") else None,
+            "ab_experiment": payload.get("ab_experiment"),
+            "candidates": len(candidates), "artifact_accepted": sum(e.get("accepted") is True for e in candidates),
             "persisted_drafts": sum(e.get("persistence_status") == "complete" for e in candidates),
             "complete_council_candidates": complete, "incomplete_or_short_circuited": incomplete,
             "unanimous_all_pass": passed, "agreement_denominator": complete,

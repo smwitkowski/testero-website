@@ -28,7 +28,7 @@ from shared.parallel import run_bounded
 from shared.evidence import check_evidence
 from shared.call_logging import call_context
 from shared.llm_generator import generate_question, cite_question, GenerationOutputError
-from shared.decision_planner import plan_decision, verify_decision, writer_decision_context, writer_documentation_context, DecisionVetoError, evidence_missing_veto
+from shared.decision_planner import plan_decision, verify_decision, writer_decision_context, writer_documentation_context, DecisionVetoError, evidence_missing_veto, decision_veto_reason
 from shared.llm_limits import MaxTokensTruncation
 from shared.cli_models import CLIModelError, CLIUsageLimitError, CLIAuthError, CodexModelRejectedError
 from shared.completion_diagnostics import _safe_completion
@@ -260,6 +260,7 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--subsection", default=None, help="Optional guide subsection filter.")
 @click.option("--objective", "objective_ids", multiple=True, help="Repeatable registry objective ID; overrides weights with round-robin targets in flag order.")
 @click.option("--distractor-evidence", type=click.Choice(["strict", "consistent"]), default="strict", show_default=True, help="Freeze decision/evidence review policy for this batch.")
+@click.option("--doccheck-policy", type=click.Choice(["v5", "v6"]), default="v5", show_default=True, help="Decision planning/proof policy; independent council gates are unchanged.")
 @click.option("--doc-context-chars", type=click.IntRange(min=1), default=DEFAULT_DOC_CONTEXT_CHARS, show_default=True, help="Maximum fetched-document context characters per stage; required receipts must fit or the stage fails closed.")
 @click.option("--doc-cache/--no-doc-cache", default=True, show_default=True, help="Reuse 7-day on-disk public official-document snapshots (IO only).")
 @click.option("--verify-retrieval", is_flag=True, help="Opt in to per-claim BM25 queries with adjacent spans and one evidence-missing full-doc escalation (cheap context at most about 45k estimated doc tokens; escalation uses the configured full-source budget).")
@@ -268,6 +269,10 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--argon-gate", is_flag=True, help="Freeze mandatory independent Gemini 4 Argon blind/full review requests.")
 @click.option("--existing-questions", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Local ACTIVE/DRAFT question export for near-duplicate veto; no DB access.")
 @click.option("--section-allocation", default=None, help="Comma-separated counts in included guide section order, summing to N; pilot: 4,5,6,6,5,4. Cannot combine with scope filters.")
+@click.option("--prompt-pack", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Validated writer-only prompt pack; judges/proofs are frozen. Default: unchanged prompts.")
+@click.option("--ab-interleaved", is_flag=True, help="Pair each objective scope into randomized control/challenger candidates; requires an even total and --prompt-pack.")
+@click.option("--ab-experiment", default=None, help="Stable experiment ID; never combine packs under one ID.")
+@click.option("--ab-seed", type=int, default=0, show_default=True, help="Choose before outcomes; randomized pair order, not model sampling.")
 @click.option("--model", default=DEFAULT_GENERATOR_MODEL, show_default=True)
 @click.option("--judge-model", default=DEFAULT_JUDGE_MODEL, show_default=True, help="Use external to export judge requests and never write the DB.")
 @click.option("--difficulty", type=click.Choice(["EASY", "MEDIUM", "HARD"]), default="MEDIUM", show_default=True)
@@ -286,12 +291,36 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
          parallel=3, gen_effort="high", cite_effort="medium", section_allocation=None, existing_questions=None, argon_gate=False,
          target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False,
          doc_cache=True, verify_retrieval=False, verify_stable_prefix=True, decision_attempts=3,
-         doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS, frozen_plan=None, continue_quality_rejections=False):
+         doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS, frozen_plan=None, continue_quality_rejections=False, doccheck_policy="v5",
+         prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0):
     retry_manifest = None
+    loaded_prompt_pack = None
     try:
+        if prompt_pack is not None:
+            from shared.prompt_pack import load_pack
+            loaded_prompt_pack = load_pack(prompt_pack)
+            policy = loaded_prompt_pack["policy"]
+            # Metadata may include other optimizer settings, but declared runtime
+            # policy bindings must agree before any generation or database calls.
+            expected = {"cert_id": cert, "doccheck_policy": doccheck_policy,
+                        "distractor_evidence": distractor_evidence}
+            for key, value in expected.items():
+                if key in policy and policy[key] != value:
+                    raise ValueError("Prompt pack policy differs from generator " + key)
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
+        if doccheck_policy not in ("v5", "v6"):
+            raise ValueError("Unsupported doccheck policy")
         n_questions = candidate_budget(n_questions, target_accepted, expected_yield)
+        if ab_interleaved:
+            if loaded_prompt_pack is None or not ab_experiment or n_questions % 2:
+                raise ValueError("A/B requires --prompt-pack, --ab-experiment and an even candidate count")
+            if frozen_plan is not None or judge_model != "external" or not argon_gate:
+                raise ValueError("A/B requires fresh external generation with --argon-gate")
+            if section_allocation is not None:
+                raise ValueError("A/B does not support explicit section allocations")
+        elif ab_experiment is not None:
+            raise ValueError("--ab-experiment requires --ab-interleaved")
         if argon_gate:
             if judge_model != "external":
                 raise ValueError("Argon gate requires external judging")
@@ -312,14 +341,25 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             if n_questions != len(plan):
                 raise ValueError("Retry candidate count differs from the frozen source slots")
         else:
-            plan = plan_questions(cert, n_questions, domain_code=domain_code, subsection=subsection, seed=seed,
+            plan = plan_questions(cert, n_questions // 2 if ab_interleaved else n_questions,
+                                  domain_code=domain_code, subsection=subsection, seed=seed,
                                   objective_ids=objective_ids, section_allocation=allocation)
+            if ab_interleaved:
+                from shared.ab_experiment import interleave_plan
+                from shared.prompt_pack import pack_hash
+                plan = interleave_plan(plan, experiment=ab_experiment, seed=ab_seed,
+                                       pack_sha256=pack_hash(loaded_prompt_pack),
+                                       cohort=str(artifact) if artifact else datetime.now(timezone.utc).isoformat())
         if continue_quality_rejections and judge_model != "external":
             raise ValueError("Quality-only continuation requires external generation")
     except ValueError as exc:
         raise click.ClickException(str(exc)) from None
     for scope in plan:
+        if frozen_plan is not None and scope.get("doccheck_policy", "v5") != doccheck_policy:
+            raise click.ClickException("Doccheck policy differs from frozen retry source")
         scope["distractor_evidence"] = dict(frozen_evidence)
+        if doccheck_policy == "v6":
+            scope["doccheck_policy"] = doccheck_policy
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     artifact = artifact or ARTIFACT_ROOT / f"{cert}-{stamp}.json"
     if not artifact.resolve().is_relative_to(ARTIFACT_ROOT.resolve()) or artifact.suffix != ".json":
@@ -345,6 +385,19 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                          "per_option_retrieval": verify_retrieval,
                                          "stable_prefix": verify_stable_prefix,
                                          "decision_attempts": decision_attempts}}
+    if loaded_prompt_pack is not None:
+        from shared.prompt_pack import pack_hash
+        payload["prompt_pack"] = {"sha256": pack_hash(loaded_prompt_pack),
+                                  "stage": loaded_prompt_pack["stage"],
+                                  "source_run": loaded_prompt_pack["source_run"],
+                                  "policy": loaded_prompt_pack["policy"]}
+    if ab_interleaved:
+        payload["ab_experiment"] = {"id": ab_experiment, "seed": ab_seed,
+            "challenger_sha256": payload["prompt_pack"]["sha256"],
+            "assignment": "randomized adjacent pairs within objective; frozen before outcomes",
+            "generation_only": True, "planned_candidates": n_questions}
+    if doccheck_policy == "v6":
+        payload["doccheck_policy"] = doccheck_policy
     tuned = uses_pde_style(plan[0]["style_policy"])
     bank_actions = [{"id": row["id"], "best_action": row["key"], "product_context": row["stem"]}
                     for row in bank["questions"]] if tuned else []
@@ -421,7 +474,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             with write_lock:
                 selected, fair_share = rotation.select(original, payload["candidates"])
                 # Required-topic reservations stay bound to their reviewed objective.
-                if frozen_plan is not None or original.get("required_topic_id") is not None:
+                if ab_interleaved or frozen_plan is not None or original.get("required_topic_id") is not None:
                     selected = original["objective_id"]
                 scope = original
                 if selected != original["objective_id"]:
@@ -432,6 +485,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         scope = tune_generation_scope(base, index - 1, coverage_scope=original["topic_coverage_scope"],
                                                       policy=payload["generation_policy"])
                     scope["distractor_evidence"] = dict(frozen_evidence)
+                    if doccheck_policy == "v6":
+                        scope["doccheck_policy"] = doccheck_policy
                     objective_rotations[index] = {"from": original["objective_id"], "to": selected,
                                                   "fair_share": fair_share}
                     plan[index - 1] = scope
@@ -447,6 +502,10 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                  "evidence": [], "citation_attempts": [], "mechanical_check": {"passed": False, "errors": ["No fetched evidence"]},
                  "judge_verdict": {"passed": False, "score": 0.0, "reason": "Not judged", "model": judge_model},
                  "accepted": False}
+        if ab_interleaved:
+            entry["ab_assignment"] = dict(scope["ab_assignment"])
+        if doccheck_policy == "v6":
+            entry["doccheck_policy"] = doccheck_policy
         if tuned:
             entry.update({key: scope[key] for key in TUNING_SCOPE_FIELDS})
         if index in objective_rotations:
@@ -456,9 +515,20 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
         stage = "decision_plan"
 
         def system_call(function, *args, **kwargs):
-            if external and continue_quality_rejections:
-                return retry_system_call(entry, stage, function, *args, **kwargs)
-            return function(*args, **kwargs)
+            def invoke():
+                if external and continue_quality_rejections:
+                    return retry_system_call(entry, stage, function, *args, **kwargs)
+                return function(*args, **kwargs)
+            # Explicit thread-local selection; clear ambient packs for every
+            # non-writer. Challenger never changes proof, retrieval or judges.
+            if loaded_prompt_pack is not None:
+                from shared.ab_experiment import generation_call
+                selected_pack = loaded_prompt_pack
+                if ab_interleaved and entry["ab_assignment"]["arm"] == "control":
+                    selected_pack = None
+                return generation_call(invoke, prompt_pack=selected_pack,
+                    writer_functions=(invoke,) if function in (plan_decision, generate_question, cite_question) else ())
+            return invoke()
 
         try:
             entry["decision_attempts"] = []
@@ -466,6 +536,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             vetoed_decisions = []
             veto_feedback = []
             escalated = False  # At most one full-source budgeted verify per candidate.
+            repair_options = None
+            previous_decision = None
             for decision_attempt in range(decision_attempts):
                 stage = "decision_plan"
                 with write_lock:
@@ -475,9 +547,15 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                   attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl"):
                     decision = system_call(plan_decision, scope, model=model, difficulty=difficulty,
                         replacement_feedback=feedback, existing_scenarios=summaries, reasoning_effort=gen_effort,
-                        **({"stable_prefix": True} if verify_stable_prefix else {}))
+                        **({"stable_prefix": True} if verify_stable_prefix else {}),
+                        **({"repair_options": repair_options} if repair_options else {}))
+                if repair_options is not None:
+                    from shared.doccheck_repair import validate_repair
+                    validate_repair(previous_decision, decision, repair_options)
                 attempt = {"attempt": decision_attempt + 1, "replacement_feedback": feedback,
                            "existing_scenarios": summaries, "plan": decision}
+                if repair_options is not None:
+                    attempt["repair_options"] = list(repair_options)
                 with write_lock:
                     planning_history[index] = decision
                 entry["decision_attempts"].append(attempt)
@@ -509,7 +587,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         attempt["product_share_check"] = entry["product_share_plan_check"] = products
                 stage = "documentation"
                 sources = system_call(search_objective_docs, scope["objective_text"], scope["services"],
-                    cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision)
+                    cache=docs_cache, objective_id=scope["objective_id"], decision_plan=decision,
+                    **({"doccheck_policy": "v6"} if doccheck_policy == "v6" else {}))
                 if not sources:
                     attempt["sources"] = []
                     attempt["documentation_check"] = {"passed": False, "reason": "No fetched official documentation"}
@@ -553,13 +632,22 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 attempt["proof"] = proof
                 if proof["passed"]:
                     break
-                vetoed_decisions.append(decision["engineering_decision"].casefold())
-                veto_feedback.append({"unsupported_decision": decision, "veto_reason": proof["reason"],
+                veto_feedback.append({"unsupported_decision": decision,
+                                      "veto_reason": decision_veto_reason(proof) if doccheck_policy == "v6" else proof["reason"],
                                       "mechanical_errors": proof["mechanical_check"]["errors"]})
-                feedback = json.dumps({"previous_vetoes": veto_feedback,
-                    "instruction": "Replace the engineering decision, not the scenario with extra exceptions. Avoid the unverifiable claim and make each distractor clearly wrong on documented tradeoffs."})
+                if doccheck_policy == "v6":
+                    from shared.doccheck_repair import failing_distractors, repair_feedback
+                    repair_options = failing_distractors(proof)
+                if repair_options is not None:
+                    previous_decision = decision
+                    feedback = repair_feedback(decision, repair_options, veto_feedback)
+                else:
+                    vetoed_decisions.append(decision["engineering_decision"].casefold())
+                    feedback = json.dumps({"previous_vetoes": veto_feedback,
+                        "instruction": "Replace the engineering decision, not the scenario with extra exceptions. Avoid the unverifiable claim and make each distractor clearly wrong on documented tradeoffs."})
             else:
-                raise DecisionVetoError("Replacement decision vetoed; discard candidate: " + proof["reason"])
+                raise DecisionVetoError("Replacement decision vetoed; discard candidate: " +
+                    (decision_veto_reason(proof) if doccheck_policy == "v6" else proof["reason"]))
             # Objective text comes from the frozen reviewed registry, never the LM.
             decision_objective = {"objective_id": scope["objective_id"], "objective_text": scope["objective_text"]}
             scope["decision_objective"] = entry["decision_objective"] = decision_objective
@@ -682,7 +770,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                               "decision_objective": decision_objective,
                               "decision_plan": decision, "decision_proof": proof,
                               "decision_attempt_count": len(entry["decision_attempts"]),
-                              "decision_veto_reasons": [attempt["proof"]["reason"] for attempt in entry["decision_attempts"]
+                              "decision_veto_reasons": [(decision_veto_reason(attempt["proof"]) if doccheck_policy == "v6" else attempt["proof"]["reason"]) for attempt in entry["decision_attempts"]
                                                         if not attempt.get("proof", {}).get("passed", True)],
                               "key_length_rank": scope["key_length_rank"]})
             if tuned:
@@ -767,9 +855,12 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                         reject_candidate(entry, stage, stage.capitalize() + " failed before acceptance")
                     planning_history.pop(index, None)
                     entry["decision_attempt_count"] = len(entry.get("decision_attempts", []))
-                    entry["decision_veto_reasons"] = [attempt["proof"]["reason"] for attempt in entry.get("decision_attempts", [])
+                    entry["decision_veto_reasons"] = [(decision_veto_reason(attempt["proof"]) if doccheck_policy == "v6" else attempt["proof"]["reason"]) for attempt in entry.get("decision_attempts", [])
                                                       if not attempt.get("proof", {}).get("passed", True)]
                     payload["candidates"].append(entry)
+                    if ab_interleaved:
+                        from shared.batch_report import ab_arm_report
+                        payload["ab_arm_report"] = ab_arm_report(payload["candidates"])
                     payload["all_candidate_key_position_report"] = key_position_report(payload["candidates"])
                     payload["key_position_report"] = key_position_report([row for row in payload["candidates"]
                         if row.get("accepted") is True or row.get("persisted") is True])

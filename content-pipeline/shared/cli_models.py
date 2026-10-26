@@ -108,9 +108,9 @@ def parse_output(text, signature):
         raise CLISchemaError("CLI structured output does not match the schema") from None
 
 
-def signature_prompt(signature, inputs):
-    """Use DSPy's JSON adapter instructions and field descriptions for both CLIs."""
-    messages = dspy.JSONAdapter().format(signature, [], inputs)
+def signature_prompt(signature, inputs, *, demos=None):
+    """Use DSPy's JSON adapter instructions and explicit demos for both CLIs."""
+    messages = dspy.JSONAdapter().format(signature, [] if demos is None else demos, inputs)
     return ("Do not use tools, browse, read files, or execute commands. Use only the supplied data. "
             "Return only the structured output requested by the schema.\n\n" +
             "\n\n".join(f"{message['role'].upper()}:\n{message['content']}" for message in messages))
@@ -337,9 +337,9 @@ def _cli_env():
     return env
 
 
-def run_signature(model: str, signature, inputs: dict[str, Any], *, timeout=CLI_TIMEOUT_SECONDS, reasoning_effort="high"):
-    """Run one DSPy signature through the shared bounded subscription transport."""
-    return _run_cli(model, signature_prompt(signature, inputs),
+def run_signature(model: str, signature, inputs: dict[str, Any], *, timeout=CLI_TIMEOUT_SECONDS, reasoning_effort="high", demos=None):
+    """Run one DSPy signature; demos are explicit and never read from global state."""
+    return _run_cli(model, signature_prompt(signature, inputs, demos=demos),
                     output_model(signature).model_json_schema(), signature, timeout=timeout, reasoning_effort=reasoning_effort)
 
 

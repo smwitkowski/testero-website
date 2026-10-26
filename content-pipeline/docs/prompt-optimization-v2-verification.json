@@ -1,0 +1,83 @@
+{
+  "observed_at": "2026-10-25T23:43:27.439930+00:00",
+  "scope": "offline implementation; no live/model/paid calls or production writes",
+  "branch": "prime/prompt-optimization",
+  "pr": 315,
+  "app": {
+    "command": "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm test",
+    "exit_code": 0,
+    "test_files": 109,
+    "tests_passed": 1952
+  },
+  "lint": {
+    "command": "npm run lint",
+    "exit_code": 0
+  },
+  "typecheck": {
+    "command": "npm run typecheck",
+    "exit_code": 0
+  },
+  "docker": {
+    "command": "docker build .",
+    "exit_code": 0,
+    "image_sha256": "54c3fea946aafc1e8dd0a3818068875dd0bc1c5bcbc98c6ca870859b7007f7fe",
+    "warning": "existing placeholder SUPABASE_SERVICE_ROLE_KEY ENV warning"
+  },
+  "pipeline_first_pass": {
+    "command": "PYTHON_DOTENV_DISABLED=1 uv run pytest -q",
+    "exit_code": 0,
+    "tests_passed": 3823,
+    "tests_skipped": 3,
+    "subtests_passed": 51
+  },
+  "optimizer_integration": {
+    "tests_passed": 47,
+    "exit_code": 0
+  },
+  "zero_cost_pack": {
+    "path": "content-pipeline/.cache/optimize/packs/zero-cost-pmle-v6.json",
+    "file_sha256": "299b0775e87dc572ce0735a5dba0835c331c5c72201dc3fc3b7a5b66b7d5fda8",
+    "domains": 6,
+    "exemplars": 18,
+    "model_calls": 0,
+    "bytes": 63267,
+    "verbatim_rubric": true,
+    "full_draft_demos": 0
+  },
+  "live_fidelity": null,
+  "live_critic_calibration": null,
+  "live_ab_gain": null,
+  "limitations": [
+    "Live 40-plan fidelity replay and 200-plan critic calibration deliberately unrun.",
+    "Sequential A/B promotion requires justified predeclared schedule and no-interference assumptions; production histories/dedup can couple objectives.",
+    "Full-plan PDE retry/resume A/B is explicitly refused; single-section PDE is supported.",
+    "Argon literal-elimination/evidence-gap report rates use documented issue-text screens, not new semantic judgments."
+  ],
+  "pipeline_final": {
+    "tests_passed": 3834,
+    "tests_skipped": 3,
+    "warnings": 25,
+    "subtests_passed": 51,
+    "command": "PYTHON_DOTENV_DISABLED=1 uv run pytest -q",
+    "exit_code": 0,
+    "duration": "123.07s (0:02:03)"
+  },
+  "logs": {
+    "help-run_domain_batch.log": "84c1f5e7a239d777169073e4ca570de2a70b492cc18c5c72b64572a51c3ca303",
+    "optimizer-integration.log": "3d45ecbb40bb53545c48181e35a509185a68bb32768b1f244994a87a17ef66dd",
+    "help-calibrate_critic.log": "492c1182a9cbea8a78bd8310cd86bf48ce63e5ef42d42097e1613b63eb989c92",
+    "docker-build.log": "7f812168bca7d3ddaa8ff2ad07ea410a9e866b8bdc5851f306a01e5b54657d92",
+    "npm-typecheck.log": "a8a91395e946881ebe9fc6bf6005d3f7962bf4aa3576af3bcf38175b9e9a3792",
+    "npm-test.log": "814b794a748052ee8d2b87c6cd301c6a2108157473d74310f2d518a662136d18",
+    "pytest-first.log": "cbe00fc868d302a6d36bb477af6162950305fbaac65ddb72391713971f4ee4c7",
+    "npm-lint.log": "1b84a718594e4458301221050423eb670311de83beeac6c27fc3540a0b668ad0",
+    "help-ab_report.log": "d155a8700cf9b8531f51feeda60ef8e8e7c3e4463e3ddaf765eb7f3537604abb",
+    "help-zero_cost.log": "b6bc902662377aec7dd1203b23d128b20a39e4dac8609f175a505d89dd1469bf",
+    "help-pipeline_nightly.log": "48c3a2f07c11648cdb04d07ca25bce9de9e93523a121ff85f119a64dfa33190f",
+    "help-run_optimizer.log": "c0ebda1389d3529141960b89c6fee0cfa1f803c76921a87c366895d47614cea5",
+    "pytest-final.log": "62ab63b633e94a63b513a3058b663df1759f72933fab6facabf569573cc94c5d",
+    "optimizer-integration-final.log": "2f2bc406490548609aa33526354b6030e7a087f01ac166f997db1307bdf09569",
+    "help-fidelity.log": "baaffb982ba44eb3c686fb388e98a8840d7d4356c60563972380cb841797ec3d",
+    "help-build_datasets.log": "9bb7dab88680580a8b98afd5d93aa84e67edcef60a327dc7fd15932306dd6fb1"
+  }
+}

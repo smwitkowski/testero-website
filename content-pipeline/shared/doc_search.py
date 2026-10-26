@@ -365,7 +365,8 @@ def _search_objective_docs(objective_text: str, services: list[str], num_results
 def search_objective_docs(objective_text: str, services: list[str], *,
                           cache: DocumentationCache | None = None,
                           objective_id: str | None = None,
-                          decision_plan: dict | None = None) -> list[dict]:
+                          decision_plan: dict | None = None,
+                          doccheck_policy: str = "v5") -> list[dict]:
     """Return fetched source records for one registry objective plus its services.
 
     Each record binds requested_url and final url to the same fetched text,
@@ -374,7 +375,11 @@ def search_objective_docs(objective_text: str, services: list[str], *,
     Decision plans retain at most two documents per option (eight extra);
     bounded reserve results and 404 path aliases do not consume that source cap;
     missing support remains a veto, never permission to invent evidence.
+    The v6 policy discovers wrong-option behavior without assuming that the
+    planned negative scenario reason is documented. The v5 queries stay unchanged.
     """
+    if doccheck_policy not in ("v5", "v6"):
+        raise DocumentationError("Documentation check policy must be v5 or v6")
     if decision_plan is None:
         if cache is None:
             return _search_objective_docs(objective_text, services, 5)
@@ -387,10 +392,15 @@ def search_objective_docs(objective_text: str, services: list[str], *,
     actions = [(decision_plan["best_action"], " ".join(decision_plan["decisive_constraints"]))]
     actions.extend((mistake["action"], mistake["scenario_reason"]) for mistake in decision_plan["mistakes"])
     for label, (action, reason) in zip("ABCD", actions):
-        targets.append(("Engineering decision: Verify this option's named Google Cloud products and capabilities."
-                        + "\nPlanned action: " + action + "\nTradeoff to verify: " + reason
-                        + "\nOfficial overview capability limitations support lifecycle documentation",
-                        OPTION_DOCUMENT_LIMIT, label))
+        if doccheck_policy == "v6" and label != "A":
+            target = ("Engineering decision: Find positive documented behavior for this option's named Google Cloud products and action."
+                      + "\nPlanned action: " + action
+                      + "\nOfficial overview capabilities supported use cases how it works documentation")
+        else:
+            target = ("Engineering decision: Verify this option's named Google Cloud products and capabilities."
+                      + "\nPlanned action: " + action + "\nTradeoff to verify: " + reason
+                      + "\nOfficial overview capability limitations support lifecycle documentation")
+        targets.append((target, OPTION_DOCUMENT_LIMIT, label))
     sources = []
     for target, limit, label in targets:
         fetched = _search_objective_docs(target, services if limit == 5 else [], limit, cache=cache,

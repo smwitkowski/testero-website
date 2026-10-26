@@ -1,0 +1,176 @@
+{
+  "recorded_from": {
+    "artifact": "machine-learning-engineer-v5-mtest-inception-mercury-3-10251217.json",
+    "candidate_id": "8d5a3f5d-8bb9-57fc-8425-25267c0836c7",
+    "attempt": 3,
+    "source_artifact_sha256": "f6b0bec25cf033f2b3875f389f5f02cf31c46efc53916e002f87e2dceb7a44d9",
+    "projection": {
+      "kind": "synthetic_context_projection",
+      "note": "Quote-centered raw excerpts, not full original fetched sources. Plan, proof, and quotes are unchanged. Fixture text_sha256 hashes the projected raw text; original_text_sha256 identifies the original fetched page.",
+      "sources": [
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/deploy-and-inference-tutorial",
+          "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/deploy-and-inference-tutorial",
+          "retrieved_at": "2026-10-25T16:19:51.813813+00:00",
+          "original_text_sha256": "92bd97bee340c19b5cfd00c32082908eefeb3794f62fb42567488735e1c6fe24",
+          "original_text_chars": 50456,
+          "retained_offsets": [
+            [
+              9963,
+              10339
+            ]
+          ],
+          "projected_text_sha256": "3d9b40eb5e21242bfd6f7ce238f700b0666a4df5ab0c2b6081d4f1d7087b2ff5"
+        },
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/maas/use-open-models",
+          "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/maas/use-open-models",
+          "retrieved_at": "2026-10-25T16:19:55.750719+00:00",
+          "original_text_sha256": "40993198a9f379cbae236293277c18fb64e0399e89b65bb38a1ee336d026a19a",
+          "original_text_chars": 8265,
+          "retained_offsets": [
+            [
+              104,
+              567
+            ]
+          ],
+          "projected_text_sha256": "989bbd8f2708e172dc9c39a392efe751321413f0558ed275367201eed3d226ae"
+        },
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/open-models/choose-serving-option",
+          "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/open-models/choose-serving-option",
+          "retrieved_at": "2026-10-25T16:21:05.041258+00:00",
+          "original_text_sha256": "6bac2563f7ab9565c8b73ffbffbbc549626bb6785bb964a2e8512986ae0b04fb",
+          "original_text_chars": 5986,
+          "retained_offsets": [
+            [
+              1367,
+              1892
+            ]
+          ],
+          "projected_text_sha256": "8dd2568ea14bd467b58532c0117e0b2d4612c07502a0e3e6589c2d75f4626c12"
+        },
+        {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/quickstart",
+          "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/quickstart",
+          "retrieved_at": "2026-10-25T13:10:55.160427+00:00",
+          "original_text_sha256": "ef828638a60f6e51d54f542c4c9cf6ef3dc4c58bfe79e16dcc578ca8b1fe9229",
+          "original_text_chars": 12146,
+          "retained_offsets": [
+            [
+              354,
+              867
+            ]
+          ],
+          "projected_text_sha256": "0e9609876576dc1655ef705453016050c874d2d1c3b8031fd11f8cae4b3f48e4"
+        }
+      ]
+    }
+  },
+  "scope": {
+    "objective_id": "machine-learning-engineer:standard:2.2:3",
+    "domain_prompt": "Recorded objective: use Model Garden models from a notebook.",
+    "distractor_evidence": {
+      "version": 1,
+      "mode": "consistent"
+    }
+  },
+  "plan": {
+    "objective_id": "machine-learning-engineer:standard:2.2:3",
+    "engineering_decision": "Choose the open-source model from Model Garden to prototype for the monitored email routing workload, using the model card's availability as a managed MaaS API as the selection criterion.",
+    "business_consequence": "If the wrong model or access path is chosen, the prototype may not reflect a viable alternative or may add unnecessary endpoint infrastructure, delaying the fix and leaving customer emails misrouted; choosing a Model Garden model that can be called through the managed MaaS API lets the team validate the replacement quickly without risking the already-running workload.",
+    "existing_system": "Your company's customer email routing workload is already running as a scheduled Agent Platform Workbench notebook that uses a Gemini model from Model Garden to classify incoming emails into support categories. Monitoring shows misclassification increasing for emails containing newly launched product names, and you want to prototype an open-source model from Model Garden in a notebook before changing the workload.",
+    "decisive_constraints": [
+      "The candidate model must be an open-source model listed in Model Garden and callable from a notebook environment.",
+      "The prototype must be evaluated on the same monitored email sample before the scheduled workload is changed."
+    ],
+    "best_action": "In a separate Colab Enterprise notebook, browse Model Garden and shortlist open-source models whose model cards indicate they are available as managed MaaS APIs, for example Llama 3.1. Call the shortlisted model from the notebook using the managed API, run the monitored email sample, compare classification accuracy with the current Gemini model, and only then update the scheduled workload.",
+    "mistakes": [
+      {
+        "action": "Select the first open-source model shown in the Model Garden UI and use the 'Try this model' panel to test it, then consider the prototype complete.",
+        "scenario_reason": "Ad hoc UI prompts do not create a reproducible notebook prototype or evaluate on the monitored email sample, so the team cannot compare accuracy against the current Gemini model or safely decide whether to update the scheduled workload."
+      },
+      {
+        "action": "Select a Model Garden model that is only available for self-deployment and deploy it to a dedicated endpoint from the notebook, even though another candidate is available as a managed MaaS API.",
+        "scenario_reason": "For a short notebook prototype, choosing a model that requires endpoint deployment adds unnecessary infrastructure and operational overhead; the managed MaaS API is the documented lightweight path, so the team should prefer a candidate available through it."
+      },
+      {
+        "action": "Select a candidate model and call it through the Model Garden deployment SDK's OpenModel.deploy() flow, creating an endpoint, instead of using the managed MaaS API listed on the model card.",
+        "scenario_reason": "When the model is already available as a managed MaaS API, the deployment SDK path adds unnecessary cost and setup time; the managed API is the intended way to call such a model from a notebook prototype, and using the deployment flow delays the evaluation."
+      }
+    ]
+  },
+  "proof": {
+    "supported": true,
+    "uniquely_best": true,
+    "scenario_reasons_supported": true,
+    "no_feature_gotchas": true,
+    "reason": "The plan is supported: the fetched docs confirm that Gemini Enterprise Agent Platform offers curated open models as managed MaaS APIs discoverable in Model Garden, which is the lightweight path for a notebook prototype; the documented self-deployment and deploy-SDK alternatives add infrastructure and are not the best fit for this short evaluation before changing the scheduled workload.",
+    "reasons": [
+      {
+        "option_label": "A - Best action",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/maas/use-open-models",
+        "quote": "Gemini Enterprise Agent Platform supports a curated list of open models as managed models. These open models can be used with Gemini Enterprise Agent Platform as a model as a service (MaaS) and are offered as a managed API.",
+        "scenario_reason": "This directly supports the decisive claim: an open-source Model Garden model can be called from a notebook through the managed MaaS API, letting the team prototype and evaluate the monitored email sample without deploying new endpoint infrastructure before updating the scheduled workload."
+      },
+      {
+        "option_label": "B - Select first model and use Try this model panel",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/quickstart",
+        "quote": "Playgrounds are powered by predeployed Gemini Enterprise Agent Platform online prediction endpoints and don't incur charges. When you open the model card for a supported model, you can use the Try out panel to quickly test the model's capabilities by sending a text prompt.",
+        "scenario_reason": "The Try out panel is documented as a quick UI test, not a reproducible notebook prototype, so it cannot evaluate the monitored email sample or produce results comparable to the current Gemini model for deciding a workload change."
+      },
+      {
+        "option_label": "C - Self-deploy a model requiring dedicated endpoint",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/open-models/choose-serving-option",
+        "quote": "Minimizing operational overhead: Choose MaaS when your team wants to focus on application logic instead of infrastructure management. Google handles all GPU/TPU provisioning, scaling, and maintenance, which benefits teams focused on application development rather than MLOps or DevOps.",
+        "scenario_reason": "For a short notebook prototype, selecting a self-deployment-only model adds endpoint infrastructure and operational overhead, while the documented MaaS path is the lightweight option; the team should prefer a candidate available through the managed API."
+      },
+      {
+        "option_label": "D - Use OpenModel.deploy() to create an endpoint",
+        "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/deploy-and-inference-tutorial",
+        "quote": "Deploy a model to an endpoint. Model Garden uses the default deployment configuration unless you specify additional argument and values.",
+        "scenario_reason": "The deployment SDK flow creates an endpoint, which is the heavier self-deployment path; when the model is already available as a managed MaaS API, using this flow adds unnecessary cost and setup time and delays the notebook evaluation."
+      }
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/deploy-and-inference-tutorial",
+      "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/deploy-and-inference-tutorial",
+      "text": "e: \"g2-standard-12\" # accelerator_type: NVIDIA_L4 # accelerator_count: 1 # } # } # container_spec { # ... # } # ... # ] Deploy a model to an endpoint. Model Garden uses the default deployment configuration unless you specify additional argument and values. import vertexai from vertexai import model_garden # TODO(developer): Update and un-comment below lines # PROJECT_ID = \"",
+      "retrieved_at": "2026-10-25T16:19:51.813813+00:00",
+      "text_sha256": "3d9b40eb5e21242bfd6f7ce238f700b0666a4df5ab0c2b6081d4f1d7087b2ff5"
+    },
+    {
+      "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/maas/use-open-models",
+      "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/maas/use-open-models",
+      "text": "nt Platform open models for MaaS Stay organized with collections Save and categorize content based on your preferences. Gemini Enterprise Agent Platform supports a curated list of open models as managed models. These open models can be used with Gemini Enterprise Agent Platform as a model as a service (MaaS) and are offered as a managed API. When you use a managed open model, you continue to send your requests to Gemini Enterprise Agent Platform endpoints. Ma",
+      "retrieved_at": "2026-10-25T16:19:55.750719+00:00",
+      "text_sha256": "989bbd8f2708e172dc9c39a392efe751321413f0558ed275367201eed3d226ae"
+    },
+    {
+      "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/open-models/choose-serving-option",
+      "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/open-models/choose-serving-option",
+      "text": "ions. This is especially useful for initial exploration, rapid prototyping, and when fast time-to-market is a key goal. Minimizing operational overhead: Choose MaaS when your team wants to focus on application logic instead of infrastructure management. Google handles all GPU/TPU provisioning, scaling, and maintenance, which benefits teams focused on application development rather than MLOps or DevOps. Variable traffic: The pay-as-you-go model supports experimental workloads or applications with unpredictable, bursty tr",
+      "retrieved_at": "2026-10-25T16:21:05.041258+00:00",
+      "text_sha256": "8dd2568ea14bd467b58532c0117e0b2d4612c07502a0e3e6589c2d75f4626c12"
+    },
+    {
+      "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/quickstart",
+      "requested_url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/model-garden/quickstart",
+      "text": " launch demo applications called Model Garden Spaces that you can share with others to showcase a model's capabilities. Playgrounds are powered by predeployed Gemini Enterprise Agent Platform online prediction endpoints and don't incur charges. When you open the model card for a supported model, you can use the Try out panel to quickly test the model's capabilities by sending a text prompt. You can also set some of the most common parameters such as temperature and number of output tokens. The playground is ",
+      "retrieved_at": "2026-10-25T13:10:55.160427+00:00",
+      "text_sha256": "0e9609876576dc1655ef705453016050c874d2d1c3b8031fd11f8cae4b3f48e4"
+    }
+  ],
+  "recorded_mechanical_check": {
+    "passed": false,
+    "errors": [
+      "Evidence must contain A, B, C and D exactly once",
+      "Evidence 0 has an invalid option label",
+      "Evidence 1 has an invalid option label",
+      "Evidence 2 has an invalid option label",
+      "Evidence 3 has an invalid option label"
+    ]
+  }
+}

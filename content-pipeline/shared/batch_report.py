@@ -184,3 +184,20 @@ def ml_practice_report(candidates):
             "allowance_judged_count": len(allowed),
             "by_objective": {ident: sum(entry["objective_id"] == ident for entry in allowed)
                              for ident in sorted({entry["objective_id"] for entry in allowed})}}
+
+
+def ab_arm_report(candidates):
+    """Compact per-arm artifact/digest counts; not a promotion decision."""
+    result = {}
+    for arm in ("control", "challenger"):
+        selected = [row for row in candidates if row.get("ab_assignment", {}).get("arm") == arm]
+        result[arm] = {"candidates": len(selected),
+            "objectives": sorted({row["objective_id"] for row in selected}),
+            "doccheck_passed": sum(row.get("decision_proof", {}).get("passed") is True for row in selected),
+            "council_passed": sum(row.get("judge_verdict", {}).get("passed") is True for row in selected),
+            "accepted": sum(row.get("accepted") is True for row in selected),
+            "awaiting_external_judge": sum(row.get("awaiting_external_judge") is True for row in selected),
+            "assignments": [{"index": row.get("index"), "candidate_id": row.get("candidate_id"),
+                "objective_id": row["objective_id"], "pair_id": row["ab_assignment"].get("pair_id")}
+                for row in selected]}
+    return result

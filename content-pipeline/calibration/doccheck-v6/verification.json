@@ -1,0 +1,66 @@
+{
+  "base_commit": "5c9814c",
+  "policy_default": "v5",
+  "live_calls": false,
+  "database_writes": false,
+  "app_verification": {
+    "npm-test": {
+      "exit_code": 0,
+      "duration": 12.319608457997674
+    },
+    "lint": {
+      "exit_code": 0,
+      "duration": 16.083138958005293
+    },
+    "typecheck": {
+      "exit_code": 0,
+      "duration": 15.466016832993773
+    },
+    "docker": {
+      "exit_code": 0,
+      "duration": 4.107800042002054
+    }
+  },
+  "initial_pipeline_tests": {
+    "passed": 3589,
+    "skipped": 3,
+    "subtests": 51,
+    "exit_code": 0
+  },
+  "v5_frozen_prompt_fingerprints": 16,
+  "recorded_case": "8d5a3f5d-8bb9-57fc-8425-25267c0836c7",
+  "recorded_cause": "All four semantic flags true, invalid decorated A-D labels fail mechanical receipts; never accepted as a valid proof.",
+  "docker_note": "Build exit0; cached layers; existing Dockerfile placeholder SUPABASE_SERVICE_ROLE_KEY warning.",
+  "ab_offline_preview": {
+    "v5_candidates": 40,
+    "v6_candidates": 40,
+    "same_scopes_after_removing_policy": true,
+    "seed": 2510,
+    "live_generation": false,
+    "live_judging": false,
+    "quality_continuation_preview_passed": true
+  },
+  "commands": [
+    "cd content-pipeline && PYTHON_DOTENV_DISABLED=1 uv run pytest -q",
+    "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm test",
+    "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run lint",
+    "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true npm run typecheck",
+    "env -i PATH=\"$PATH\" HOME=\"$HOME\" CI=true docker build ."
+  ],
+  "outside_scope": {
+    "pde_two_wave_resume_display_order": {
+      "location": "scripts/pde_retry.py:399",
+      "reproduced_v5": true,
+      "reproduced_v6": true,
+      "fixed": false,
+      "note": "Default one-wave resume tested; two-wave test uses explicitly canonical comparison injection to isolate policy propagation."
+    }
+  },
+  "final_pipeline_tests": {
+    "exit_code": 0,
+    "duration_seconds": 114.7292182500023,
+    "native_summary": "3605 passed, 3 skipped, 25 warnings, 51 subtests passed in 112.89s (0:01:52)",
+    "source_test_hash_fence_unchanged": true,
+    "tracked_snapshot_sha256": "801439f52ba06a544fe9f0925a660cc19d2a95c34bd877f00c9f1f28f795bbd1"
+  }
+}
