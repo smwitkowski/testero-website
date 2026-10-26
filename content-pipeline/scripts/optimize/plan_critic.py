@@ -49,7 +49,8 @@ class PlanCriticSignature(dspy.Signature):
     options_distinct_approaches: bool = dspy.OutputField()
     constraints_as_wants: bool = dspy.OutputField()
     no_literal_elimination: bool = dspy.OutputField(desc="O3: no choice loses to a literal fact or approach ban alone.")
-    failing_options: list[Literal["A", "B", "C", "D"]] = dspy.OutputField()
+    failing_options: list[Literal["A", "B", "C", "D"]] = dspy.OutputField(
+        desc="Options whose DESIGN fails a check above. Not the incorrect answers: well-designed distractors are not listed. Empty when every option passes.")
     reason: str = dspy.OutputField(desc="Name concrete failed checks/options and what passed; do not invent facts.")
 
 
