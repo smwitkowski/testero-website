@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "stage": "plan",
+  "policy": {
+    "doccheck_policy": "v5",
+    "planner_cards": {
+      "sha256": "97df3c04181ec2c457f0a9f6d7e9b946ffbaade624cfb6c98b0aba0c9800b945",
+      "cutoff": "2026-10-26T00:00:00Z",
+      "base_pack_sha256": "72b050e97e28d3065c7bc8b36a06ef3727ca2b277ce96497e20ed9d38841fb8d"
+    }
+  },
+  "source_run": "offline-card-base:cards:97df3c04181ec2c457f0a9f6d7e9b946ffbaade624cfb6c98b0aba0c9800b945",
+  "scores": {},
+  "writers": [
+    {
+      "signature": "DecisionPlanSignature",
+      "base_signature_hash": "ea30d35cfd5588099c5a03df96243f7b59f147af4599b228aba24ae26daaba20",
+      "instructions": null,
+      "demos": [],
+      "lessons": {
+        "machine-learning-engineer:standard:1.2:3": "Coverage: No reliable recurring coverage claim retained.\nLifecycle: imagen-3.0-capability-001 is listed as discontinued; migration deadline 2026-06-30. As of 2026-10-14 (page-923d9e307349f370).\nCurrent names: Imagen; Agent Platform; Model Garden",
+        "machine-learning-engineer:standard:3.2:6": "Coverage: The docs here do not establish Model Garden full fine-tuning capability.\nLifecycle: No dated lifecycle fact selected.\nCurrent names: Agent Platform; Agent Platform custom training; Model Garden",
+        "machine-learning-engineer:standard:3.3:2": "Coverage: For proposed TensorFlow single-slice TPU training, the supplied scaling/Multislice pages did not establish the TPUStrategy synchronous-replication claims together with the proposed batch-splitting or gradient-aggregation behavior. Multislice's TensorFlow restriction does not rule out single-slice training.\nLifecycle: No dated lifecycle fact selected.\nCurrent names: Agent Platform",
+        "machine-learning-engineer:standard:5.1:3": "Coverage: The docs here do not establish training-only augmentation behavior.\nLifecycle: Feature Store Optimized online serving is deprecated; critical patches only from 2026-05-17; sunset 2027-02-17. As of 2026-10-25 (page-658e16541d9b7027).\nCurrent names: No objective-specific name selected."
+      }
+    }
+  ]
+}

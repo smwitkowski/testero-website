@@ -183,29 +183,31 @@ def test_paired_math_clusters_objectives_not_candidates():
     assert stats["objective_differences"] == {"x": 1, "y": -1}
     assert stats["difference"] == 0
     assert stats["clustered_standard_error"] == pytest.approx(1)
-    assert stats["sequential"]["alpha_at_prefix"] == pytest.approx(.05 / 12)
-    assert stats["sequential"]["radius"] == pytest.approx(math.sqrt(math.log(480)))
-    assert not stats["sequential"]["yield_improved"]
+    assert stats["hoeffding_secondary"]["alpha_at_prefix"] == pytest.approx(.05 / 12)
+    assert stats["hoeffding_secondary"]["radius"] == pytest.approx(math.sqrt(math.log(480)))
+    assert not stats["hoeffding_secondary"]["yield_improved"]
 
 
-def test_always_valid_spending_sums_to_alpha_and_repeated_looks_are_stable():
+def test_hoeffding_is_secondary_and_repeated_looks_are_stable():
     assert sum(.05 / (n * (n + 1)) for n in range(1, 10000)) <= .05
     rows = []
     for n in range(1000):
         rows.extend([row("control", objective=str(n), pair=str(n)), row("challenger", objective=str(n), pair=str(n), accepted=True)])
     first = paired_statistics(rows)
     assert first == paired_statistics(rows)
-    assert first["sequential"]["lower"] > 0
-    assert first["sequential"]["yield_improved"]
+    assert first["hoeffding_secondary"]["lower"] > 0
+    assert first["hoeffding_secondary"]["yield_improved"]
+    assert not first["hoeffding_secondary"]["deciding"]
+    assert not first["permutation"]["yield_improved"]  # Beyond fixed horizon.
     # Replicating candidates within ONE objective never invents independent clusters.
     for value in rows:
         value["objective_id"] = "x"
-    assert not paired_statistics(rows)["sequential"]["yield_improved"]
+    assert not paired_statistics(rows)["hoeffding_secondary"]["yield_improved"]
 
 
 def test_incomplete_duplicates_and_cross_objective_pairs_fail_closed():
     assert paired_statistics([row("control")])["incomplete_pairs"] == 1
-    assert paired_statistics([])["sequential"]["lower"] is None
+    assert paired_statistics([])["hoeffding_secondary"]["lower"] is None
     with pytest.raises(ValueError, match="Duplicate"):
         paired_statistics([row("control"), row("control")])
     with pytest.raises(ValueError, match="crosses objectives"):
@@ -228,15 +230,20 @@ def test_conditional_council_and_guardrail_denominators_are_explicit():
     assert not summarize(rows, [])["complete"]
 
 
-def synthetic_artifact(tmp_path):
-    plan = assignments()
+def synthetic_artifact(tmp_path, *, control=None, flags=None, cohort="batch", filename="batch.json"):
+    plan = interleave_plan(scopes(), experiment="trial", seed=0, pack_sha256=DIGEST, cohort=cohort,
+                           **({"control_pack_sha256": control} if control is not None else {}))
     entries = []
     for index, scope in enumerate(plan, 1):
         entries.append({**scope, "index": index, "accepted": False, "failure_stage": "decision_veto",
                         "error_class": "DecisionVetoError", "decision_proof": {"passed": False}})
-    path = tmp_path / "batch.json"
-    path.write_text(json.dumps({"ab_experiment": {"id": "trial", "challenger_sha256": DIGEST, "seed": 0, "generation_only": True},
-        "planned_count": len(plan), "plan": plan, "candidates": entries}))
+    path = tmp_path / filename
+    payload = {"ab_experiment": {"id": "trial", "challenger_sha256": DIGEST, "seed": 0, "generation_only": True},
+               "planned_count": len(plan), "plan": plan, "candidates": entries, **(flags or {})}
+    if control is not None:
+        payload["ab_experiment"]["control_sha256"] = control
+        payload["ab_control_pack"] = {"sha256": control, "stage": "plan", "source_run": "offline-test", "policy": {}}
+    path.write_text(json.dumps(payload))
     return path
 
 
@@ -316,8 +323,11 @@ def test_report_replays_frozen_gate_math_and_issue_text_screens(tmp_path, monkey
     assert not ab_report.candidate_row({"rules_version": 5}, entry, tmp_path / "batch.json")["complete"]
 
 
-def test_report_reuses_promotion_then_enforces_all_extra_guardrails(tmp_path, monkeypatch):
-    path = synthetic_artifact(tmp_path)
+@pytest.mark.parametrize("control,flags", [(None, {}), ("b" * 64, {}),
+    (None, {"plan_freshness_lint": True, "scenario_hint_cap": True}),
+    ("b" * 64, {"plan_freshness_lint": True, "scenario_hint_cap": True})])
+def test_report_reuses_promotion_then_enforces_all_extra_guardrails(tmp_path, monkeypatch, control, flags):
+    path = synthetic_artifact(tmp_path, control=control, flags=flags)
     data = json.loads(path.read_text())
     calls = [{"stage": "plan", "index": entry["index"], "input_tokens": 100, "output_tokens": 10}
              for entry in data["candidates"]]
@@ -329,23 +339,35 @@ def test_report_reuses_promotion_then_enforces_all_extra_guardrails(tmp_path, mo
         return result
     monkeypatch.setattr(ab_report, "candidate_row", normalized)
     original_stats = ab_report.paired_statistics
-    def positive_sequential(rows, **kwargs):
+    def positive_permutation(rows, **kwargs):
         result = original_stats(rows, **kwargs)
-        result["sequential"].update(lower=.1, yield_improved=True)
+        result["permutation"].update(p_value=.001, yield_improved=True)
         return result
-    monkeypatch.setattr(ab_report, "paired_statistics", positive_sequential)
+    monkeypatch.setattr(ab_report, "paired_statistics", positive_permutation)
     canary = {"kind": "canaries", "complete": True, "errors": [], "observed": 40,
         "canaries": {name: {"count": 20, "catch_rate": 1, "full": True} for name in ("swapped_key", "retired_name")}}
-    binding = {"experiment": "trial", "challenger_sha256": DIGEST, "complete": True}
+    binding = {"experiment": "trial", "challenger_sha256": DIGEST, "complete": True,
+               **({"control_sha256": control} if control is not None else {}),
+               **({"generation_options": flags} if flags else {})}
     spot = {**binding, "pairs": 10, "losses": 1, "factual_defects": 0}
     held = {**binding, "count": 30, "gain_persists": True}
-    schedule = {**binding, "artifacts": [str(path)], "independent_objectives_no_interference": True}
+    schedule = {**binding, "artifacts": [str(path)], "independent_objectives_no_interference": True,
+                "pair_horizon": 160, "paired_looks": [{"pairs": 80, "alpha": .005}, {"pairs": 160, "alpha": .045}]}
     report = ab_report.make_report([path], canary=canary, spot_check=spot, held_out=held, schedule=schedule)
     assert report["promotion"]["promote"], report["promotion"]["reasons"]
+    assert report.get("control_sha256") == control
+    assert report["generation_options"] == {name: flags.get(name, False)
+                                          for name in ("plan_freshness_lint", "scenario_hint_cap")}
     for kwargs, fragment in [({"spot_check": {**spot, "losses": 7}}, "human"),
                              ({"spot_check": {**spot, "factual_defects": 1}}, "human"),
                              ({"held_out": {**held, "gain_persists": False}}, "held-out"),
-                             ({"schedule": {**schedule, "artifacts": ["other.json", str(path)]}}, "schedule")]:
+                             ({"schedule": {**schedule, "artifacts": ["other.json", str(path)]}}, "schedule"),
+                             ({"schedule": {**schedule, "pair_horizon": 200}}, "schedule"),
+                             ({"schedule": {**schedule, "paired_looks": []}}, "schedule"),
+                             ({"schedule": {**schedule, "control_sha256": "c" * 64}}, "schedule"),
+                             ({"spot_check": {**spot, "control_sha256": "c" * 64}}, "human"),
+                             ({"held_out": {**held, "control_sha256": "c" * 64}}, "held-out"),
+                             ({"schedule": {**schedule, "generation_options": {"plan_freshness_lint": "bad"}}}, "schedule")]:
         inputs = {"canary": canary, "spot_check": spot, "held_out": held, "schedule": schedule, **kwargs}
         result = ab_report.make_report([path], **inputs)
         assert not result["promotion"]["promote"]
@@ -407,3 +429,87 @@ def test_report_allows_runtime_proofs_in_plan_without_changing_assignments(tmp_p
     data["plan"][1]["decision_proof"] = {"passed": True}
     path.write_text(json.dumps(data))
     assert not ab_report.make_report([path])["promotion"]["promote"]
+
+
+@pytest.mark.parametrize("count,look,alpha", [(79, None, None), (80, 1, .005), (81, None, None),
+                                               (159, None, None), (160, 2, .045), (161, None, None)])
+def test_only_predeclared_looks_decide(count, look, alpha):
+    rows = [item for n in range(count) for item in
+            (row("control", objective=str(n % 40), pair=str(n)),
+             row("challenger", objective=str(n % 40), pair=str(n), accepted=True))]
+    result = paired_statistics(rows)
+    assert result["permutation"]["look_number"] == look
+    assert result["permutation"]["alpha_at_look"] == alpha
+    assert result["permutation"]["yield_improved"] == (look is not None)
+    assert result["bootstrap_95"]["lower"] == result["bootstrap_95"]["upper"] == 1
+    rows.append(row("control", pair="incomplete"))
+    assert not paired_statistics(rows)["permutation"]["yield_improved"]
+
+
+def test_equal_objective_weight_bootstrap_and_degenerate_inputs():
+    rows = [row("control", objective="x", pair=str(n)) for n in range(8)]
+    rows += [row("challenger", objective="x", pair=str(n), accepted=True) for n in range(8)]
+    rows += [row("control", objective="y", pair="y", accepted=True), row("challenger", objective="y", pair="y")]
+    result = paired_statistics(rows)
+    assert result["difference"] == 0  # Not the pair-weighted 7/9.
+    assert result["bootstrap_95"]["lower"] == -1
+    assert result["bootstrap_95"]["upper"] == 1
+    assert paired_statistics([])["bootstrap_95"]["lower"] is None
+    assert paired_statistics(rows[:1])["permutation"]["p_value"] == 1
+    bad = row("challenger", accepted=1)
+    with pytest.raises(ValueError, match="boolean"):
+        paired_statistics([bad])
+    with pytest.raises(ValueError, match="predeclared"):
+        paired_statistics([], alpha=.10)
+
+
+@pytest.mark.parametrize("name", ["plan_freshness_lint", "scenario_hint_cap"])
+def test_report_rejects_mixed_generation_flags_but_absent_equals_false(tmp_path, name):
+    first = synthetic_artifact(tmp_path)
+    second = synthetic_artifact(tmp_path, flags={name: False}, cohort="other", filename="other.json")
+    report = ab_report.make_report([first, second])
+    assert report["paired"]["paired_candidates"] == 6
+    assert not report["generation_options"][name]
+    payload = json.loads(second.read_text())
+    payload[name] = True
+    second.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="generation-option fingerprints"):
+        ab_report.make_report([first, second])
+    payload[name] = 1
+    second.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match="boolean"):
+        ab_report.make_report([first, second])
+
+
+@pytest.mark.parametrize("mutation", ["missing-root", "root-hash", "missing-meta", "bad-control-hash",
+                                       "missing-assignment", "wrong-arm-pack"])
+def test_report_rejects_explicit_control_provenance_mismatch(tmp_path, mutation):
+    path = synthetic_artifact(tmp_path, control="b" * 64)
+    data = json.loads(path.read_text())
+    if mutation == "missing-root":
+        data.pop("ab_control_pack")
+    elif mutation == "root-hash":
+        data["ab_control_pack"]["sha256"] = "c" * 64
+    elif mutation == "missing-meta":
+        data["ab_experiment"].pop("control_sha256")
+    elif mutation == "bad-control-hash":
+        data["ab_experiment"]["control_sha256"] = data["ab_control_pack"]["sha256"] = "bad"
+    elif mutation == "missing-assignment":
+        data["plan"][0]["ab_assignment"].pop("control_sha256")
+    else:
+        for item in data["candidates"]:
+            if item["ab_assignment"]["arm"] == "control":
+                item["ab_assignment"]["prompt_pack_sha256"] = None
+    path.write_text(json.dumps(data))
+    with pytest.raises(ValueError):
+        ab_report.make_report([path])
+
+
+def test_report_rejects_mixed_control_pack_hashes(tmp_path):
+    first = synthetic_artifact(tmp_path, control="b" * 64)
+    second = synthetic_artifact(tmp_path, control="c" * 64, cohort="other", filename="other.json")
+    with pytest.raises(ValueError, match="challenger/control packs"):
+        ab_report.make_report([first, second])
+    second = synthetic_artifact(tmp_path, cohort="other", filename="other.json")
+    with pytest.raises(ValueError, match="challenger/control packs"):
+        ab_report.make_report([first, second])

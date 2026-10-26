@@ -77,13 +77,15 @@ def test_claude_cache_totals_are_added_once():
     assert result["writer_tokens"] == 135
 
 
-def test_promotion_strict_improvement_5pp_boundary_and_full_canary():
+def test_promotion_strict_improvement_10pp_boundary_and_full_canary():
     baseline = summarize_arm(arm([candidate(), candidate("y", passed=False)]))
     packed = deepcopy(baseline)
     packed["council_pass_rate"] = .6
     packed["seat_pass_rates"]["claude.style"] = .45
     assert promotion_decision(baseline, packed, canaries())["promote"]
-    packed["seat_pass_rates"]["claude.style"] = .449
+    packed["seat_pass_rates"]["claude.style"] = .401
+    assert promotion_decision(baseline, packed, canaries())["promote"]
+    packed["seat_pass_rates"]["claude.style"] = .4
     assert not promotion_decision(baseline, packed, canaries())["promote"]
     packed["seat_pass_rates"]["claude.style"] = .5
     for canary in (None, {"catch_rate": 1}, canaries() | {"complete": False}):
@@ -308,3 +310,53 @@ def test_each_canary_defect_needs_at_least_twenty_not_only_forty_total():
     cohort["canaries"]["swapped_key"]["count"] = 1
     cohort["canaries"]["retired_name"]["count"] = 39
     assert not promotion_decision(baseline, challenger, cohort)["promote"]
+
+
+def seat_case(*, clusters, drop):
+    # Many repeated outcomes in an objective do not add independent evidence.
+    baseline = summarize_arm(arm([candidate()]))
+    packed = deepcopy(baseline)
+    baseline["council_pass_rate"] = .5
+    packed["council_pass_rate"] = .6
+    old_passes, new_passes = 80, 80 - drop
+    for summary, passes in ((baseline, old_passes), (packed, new_passes)):
+        summary["seat_pass_rates"]["claude.style"] = passes / 100
+        summary["seat_objectives"] = {str(n): {"count": 100, "passes": {
+            **dict.fromkeys(SEATS, 100), "claude.style": passes}} for n in range(clusters)}
+    return baseline, packed
+
+
+@pytest.mark.parametrize("clusters,drop,blocked", [(1, 6, False), (4, 6, False), (5, 6, True),
+                                                    (1, 9, False), (1, 10, True), (40, 0, False),
+                                                    (40, -6, False)])
+def test_seat_guardrail_one_sided_cluster_significance_or_10pp(clusters, drop, blocked):
+    baseline, packed = seat_case(clusters=clusters, drop=drop)
+    result = promotion_decision(baseline, packed, canaries())
+    assert result["promote"] is not blocked
+    test = result["seat_tests"]["claude.style"]
+    assert test["clusters"] == clusters
+    if drop > 0:
+        assert test["p_value"] == pytest.approx(2**-clusters)
+    else:
+        assert test["p_value"] == 1
+
+
+def test_missing_seat_clustering_fails_closed_and_unobserved_votes_not_imputed():
+    baseline, packed = seat_case(clusters=1, drop=6)
+    packed.pop("seat_objectives")
+    assert not promotion_decision(baseline, packed, canaries())["promote"]
+    baseline, packed = seat_case(clusters=1, drop=6)
+    packed["seat_objectives"] = {"other": packed["seat_objectives"]["0"]}
+    result = promotion_decision(baseline, packed, canaries())
+    assert result["seat_tests"]["claude.style"]["clusters"] == 0
+    assert result["seat_tests"]["claude.style"]["unmatched_objectives"] == 2
+    assert result["promote"]  # No invented significant result from skipped votes.
+
+
+def test_significant_equal_objective_seat_harm_blocks_even_with_pooled_rate_gain():
+    baseline, packed = seat_case(clusters=40, drop=6)
+    # Arm pooling can obscure common-objective harm under unequal observation.
+    packed["seat_pass_rates"]["claude.style"] = .9
+    result = promotion_decision(baseline, packed, canaries())
+    assert not result["promote"]
+    assert any("Significant" in reason for reason in result["reasons"])

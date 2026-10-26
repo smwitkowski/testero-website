@@ -79,5 +79,32 @@
       "status": "renamed",
       "source": "shared/question_style.py S11 short-name rule"
     }
+  ],
+  "planner_products": [
+    {
+      "old": "imagen-3.0-capability-001",
+      "new": "gemini-2.5-flash-image",
+      "status": "retired",
+      "source": "https://docs.cloud.google.com/vertex-ai/generative-ai/docs/image/upscale-image",
+      "as_of": "2026-10-14",
+      "lifecycle_date": "2026-06-30"
+    },
+    {
+      "old": "Vertex AI Vision",
+      "new": "a currently supported vision solution verified in official documentation",
+      "status": "retired",
+      "source": "https://docs.cloud.google.com/vision-ai/docs/object-detector-model",
+      "as_of": "2026-10-14",
+      "lifecycle_date": "2026-09-30"
+    },
+    {
+      "old": "Optimized online serving",
+      "new": "Bigtable online serving or purpose-built Vector Search, depending on workload",
+      "status": "deprecated",
+      "source": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/featurestore/latest/overview",
+      "as_of": "2026-10-25",
+      "lifecycle_date": "2026-05-17",
+      "retirement_date": "2027-02-17"
+    }
   ]
 }

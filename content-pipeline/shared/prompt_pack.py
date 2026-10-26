@@ -31,6 +31,7 @@ class _Writer(BaseModel):
     components: dict[str, str] | None = None
     exemplars: list[dict[str, Any]] | None = None
     frozen_rubric: str | None = None
+    lessons: dict[str, str] | None = None
 
 
 class _Pack(BaseModel):
@@ -112,7 +113,7 @@ def validate_pack(pack):
             if writer["instructions"] is not None and not writer["instructions"].strip():
                 raise PromptPackError("Optimized instructions must be nonempty, or null for unchanged")
             writer["demos"] = [_demo(base, demo) for demo in writer["demos"]]
-            additions = ("components", "exemplars", "frozen_rubric")
+            additions = ("components", "exemplars", "frozen_rubric", "lessons")
             if any(writer[key] is not None for key in additions):
                 from shared.plan_components import validate_components, frozen_decision_rules
                 if stage != "plan":
@@ -121,6 +122,12 @@ def validate_pack(pack):
                     writer["components"] = validate_components(writer["components"])
                     if writer["instructions"] is not None and "plan.instructions" in writer["components"]:
                         raise PromptPackError("Use either instructions or plan.instructions, not both")
+                if writer["lessons"] is not None:
+                    from shared.planner_cards import lint_card_text
+                    for objective_id, text in writer["lessons"].items():
+                        if not objective_id.strip():
+                            raise PromptPackError("Card objective IDs must be nonempty")
+                        lint_card_text(text)
                 if writer["exemplars"] is not None:
                     writer["exemplars"] = _compact_exemplars(writer["exemplars"])
                 if writer["frozen_rubric"] is not None and writer["frozen_rubric"] != frozen_decision_rules():
@@ -137,7 +144,7 @@ def validate_pack(pack):
 
 
 def create_pack(*, stage, signature=None, instructions=None, demos=(), policy, source_run, scores,
-                components=None, exemplars=None, frozen_rubric=None):
+                components=None, exemplars=None, frozen_rubric=None, lessons=None):
     """Create one writer entry (or an empty identity pack with signature=None).
 
     Demos are complete dictionaries or DSPy Examples, with no optimizer metadata.
@@ -152,8 +159,10 @@ def create_pack(*, stage, signature=None, instructions=None, demos=(), policy, s
             normalized.append(_demo(base, values))
         writers = [{"signature": base.__name__, "base_signature_hash": signature_hash(base),
                     "instructions": instructions, "demos": normalized,
-                    "components": components, "exemplars": exemplars, "frozen_rubric": frozen_rubric}]
-    elif instructions is not None or demos or components is not None or exemplars is not None or frozen_rubric is not None:
+                    "components": components, "exemplars": exemplars, "frozen_rubric": frozen_rubric,
+                    "lessons": lessons}]
+    elif (instructions is not None or demos or components is not None or exemplars is not None
+          or frozen_rubric is not None or lessons is not None):
         raise PromptPackError("Instructions/demos require a writer signature")
     return validate_pack({"version": 1, "stage": stage, "policy": policy, "source_run": source_run,
                           "scores": scores, "writers": writers})
@@ -276,7 +285,7 @@ def writer_exemplars(scope):
 
 
 def writer_plan_additions(scope):
-    """Render only explicitly selected frozen rubric and compact plan examples."""
+    """Render opt-in writer context, with cards only for the exact objective."""
     from shared.decision_planner import DecisionPlanSignature
     entry = _entry(DecisionPlanSignature)
     if entry is None:
@@ -290,4 +299,9 @@ def writer_plan_additions(scope):
             "Use only as decision-design examples, never as documentation or factual evidence. "
             "Do not copy their scenarios; all new claims require the unchanged documentation veto.\n"
             + "\n".join(_canonical(record["plan"]) for record in examples))
+    lesson = entry.get("lessons", {}).get(scope.get("objective_id"))
+    if lesson:
+        sections.append("Frozen doc-reality orientation for this objective. Coverage gaps describe "
+            "these pages, not product limits. This is not evidence; every new claim still "
+            "requires the unchanged documentation check.\n" + lesson)
     return "\n\n".join(sections)

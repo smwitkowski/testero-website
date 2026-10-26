@@ -1,16 +1,16 @@
 """Offline production A/B report. This command never generates, judges or publishes.
 
-Sequential bounds use alpha spending across candidate-pair prefix lengths and
-Hoeffding bounds on independent objective clusters. Dependence within each
-objective is unrestricted. Promotion requires a predeclared cumulative schedule,
-no interference across objectives, and no outcome-driven exclusions. Re-reading
-the same prefix spends no new alpha. A descriptive clustered SE is not the
-sequential decision. Small objective counts intentionally have wide bounds.
+Decision looks are fixed at 80 and 160 complete pairs, using one-sided
+objective-cluster sign flips with alpha .005 and .045. Whole-objective bootstrap
+intervals and the legacy time-uniform Hoeffding bound are secondary diagnostics.
+Inference requires independent sign-exchangeable objective clusters, a frozen
+sampling schedule, no interference and no outcome-driven exclusions.
 """
 from __future__ import annotations
 
 import argparse
 from collections import defaultdict
+from fractions import Fraction
 import hashlib
 import json
 import math
@@ -18,7 +18,8 @@ from pathlib import Path
 import re
 from statistics import mean, stdev
 
-from scripts.optimize.evaluate_pack import SEATS, promotion_decision, writer_token_usage
+from scripts.optimize.evaluate_pack import SEATS, promotion_decision, writer_token_usage, seat_objective_counts
+from scripts.optimize.cluster_statistics import PREDECLARED_LOOKS, cluster_bootstrap_interval, sign_flip_test
 
 GUARDRAILS = ("argon_literal_elimination", "argon_evidence_gap", "generic_keys", "rubric_echoes", "mechanism_duplicates")
 LITERAL = re.compile(r"literal|stem (?:text )?alone|reading.comprehension|explicit contradiction|without (?:product|domain|cloud).*knowledge", re.I)
@@ -31,18 +32,18 @@ def read(path):
 
 
 def paired_statistics(rows, *, alpha=.05):
-    """Equal-weight objective-cluster differences and a time-uniform bound.
+    """Paired accepted yield with fixed-look objective-cluster inference.
 
-    At each fixed pair-prefix N, objective means lie in [-1,1]. Hoeffding gives
-    radius sqrt(2 log(2/alpha_N)/G); alpha_N=alpha/(N(N+1)) sums to alpha.
-    The union bound does not require independence between successive looks.
-    The fixed-prefix bound DOES require independent objective clusters and a
-    predetermined sampling schedule, not outcome-adaptive objective rotation.
+    Only exactly 80 or 160 complete pairs can decide; other prefixes remain
+    descriptive, including prefixes beyond the horizon. Incomplete pairs never
+    decide. The old Hoeffding calculation is retained, but cannot promote.
     """
-    if not 0 < alpha < 1:
-        raise ValueError("alpha must lie strictly between zero and one")
+    if alpha != .05:
+        raise ValueError("alpha is predeclared at .05 (.005 at 80; .045 at 160)")
     pairs = defaultdict(dict)
     for row in rows:
+        if row["arm"] not in {"control", "challenger"} or type(row["accepted"]) is not bool:
+            raise ValueError("A/B rows require a known arm and boolean accepted outcome")
         key = (row["cohort"], row["pair_id"])
         if row["arm"] in pairs[key]:
             raise ValueError("Duplicate arm in an A/B pair")
@@ -57,7 +58,8 @@ def paired_statistics(rows, *, alpha=.05):
         if control["objective_id"] != challenger["objective_id"]:
             raise ValueError("A/B pair crosses objectives")
         clusters[control["objective_id"]].append(int(challenger["accepted"]) - int(control["accepted"]))
-    differences = {objective: mean(values) for objective, values in sorted(clusters.items())}
+    exact_values = [Fraction(sum(values), len(values)) for _, values in sorted(clusters.items())]
+    differences = {objective: float(value) for objective, value in zip(sorted(clusters), exact_values)}
     values = list(differences.values())
     count = sum(map(len, clusters.values()))
     effect = mean(values) if values else None
@@ -66,10 +68,20 @@ def paired_statistics(rows, *, alpha=.05):
     radius = math.sqrt(2 * math.log(2 / alpha_look) / len(values)) if values else None
     lower = max(-1., effect - radius) if values else None
     upper = min(1., effect + radius) if values else None
+    test = sign_flip_test(exact_values)
+    look = next((index for index, item in enumerate(PREDECLARED_LOOKS, 1) if count == item["pairs"]), None)
+    threshold = PREDECLARED_LOOKS[look - 1]["alpha"] if look else None
+    decision = {**test, "look_number": look, "alpha_at_look": threshold,
+                "pair_horizon": 160, "predeclared_looks": [dict(item) for item in PREDECLARED_LOOKS],
+                "eligible_look": look is not None and incomplete == 0,
+                "yield_improved": (look is not None and incomplete == 0 and effect > 0
+                                   and test["p_value"] <= threshold),
+                "assumptions": "Independent sign-exchangeable objective clusters under the null; predeclared sampling; no interference or outcome-adaptive exclusions."}
     return {"estimand": "equal-weight objective mean of paired challenger-minus-control accepted yield",
         "paired_candidates": count, "objective_clusters": len(values), "incomplete_pairs": incomplete,
         "objective_differences": differences, "difference": effect, "clustered_standard_error": se,
-        "sequential": {"method": "objective-cluster Hoeffding with alpha/(N*(N+1)) spending",
+        "permutation": decision, "bootstrap_95": cluster_bootstrap_interval(exact_values),
+        "hoeffding_secondary": {"deciding": False, "method": "objective-cluster Hoeffding with alpha/(N*(N+1)) spending",
             "alpha": alpha, "alpha_at_prefix": alpha_look, "radius": radius,
             "lower": lower, "upper": upper, "yield_improved": lower is not None and lower > 0,
             "assumptions": "Predeclared cumulative pair prefixes; independent objective clusters; no cross-objective interference or outcome-adaptive selection."}}
@@ -164,15 +176,34 @@ def summarize(rows, calls):
         "council_given_doccheck": sum(row["council_passed"] for row in docpass) / len(docpass) if docpass else None,
         "council_pass_rate": sum(row["council_passed"] for row in judged) / len(judged) if judged else None,
         "council_count": len(judged),
+        "seat_objectives": seat_objective_counts(judged),
         "seat_pass_rates": {seat: sum(row["seats"][seat] for row in judged) / len(judged) if judged else None for seat in SEATS},
         "guardrails": guards, "writer_usage": usage,
         "complete": bool(rows) and all(row["complete"] for row in rows) and usage["complete"]}
+
+
+def analysis_configuration(payload):
+    """Validate optional control provenance and compare generation-side options."""
+    meta = payload["ab_experiment"]
+    control = meta.get("control_sha256")
+    provenance = payload.get("ab_control_pack")
+    if control is not None:
+        if (not isinstance(control, str) or not re.fullmatch(r"[0-9a-f]{64}", control)
+                or not isinstance(provenance, dict) or provenance.get("sha256") != control):
+            raise ValueError("Explicit A/B control pack requires matching SHA256 provenance")
+    elif provenance is not None:
+        raise ValueError("A/B control pack provenance is missing its experiment hash")
+    flags = tuple(payload.get(name, False) for name in ("plan_freshness_lint", "scenario_hint_cap"))
+    if any(type(flag) is not bool for flag in flags):
+        raise ValueError("A/B generation-option metadata must be boolean")
+    return control, flags
 
 
 def validate_plan(payload):
     """Recompute assignments, rather than trusting self-reported arm labels."""
     from shared.ab_experiment import interleave_plan
     meta = payload["ab_experiment"]
+    control, _ = analysis_configuration(payload)
     plan = payload.get("plan")
     count = payload.get("planned_count")
     if (type(count) is not int or count < 2 or count % 2 or not isinstance(plan, list)
@@ -185,7 +216,8 @@ def validate_plan(payload):
     if not isinstance(cohort, str) or not cohort:
         raise ValueError("A/B frozen plan requires a cohort ID")
     expected = interleave_plan(base, experiment=meta["id"], seed=meta["seed"],
-        pack_sha256=meta["challenger_sha256"], cohort=cohort)
+        pack_sha256=meta["challenger_sha256"], cohort=cohort,
+        **({"control_pack_sha256": control} if control is not None else {}))
     normalized = [{key: value for key, value in scope.items() if key not in runtime - {"ab_assignment"}} for scope in plan]
     if expected != normalized:
         raise ValueError("Frozen A/B plan does not match expected randomized objective pairs")
@@ -198,16 +230,19 @@ def make_report(artifacts, *, canary=None, spot_check=None, held_out=None, sched
     if not paths or len(set(paths)) != len(paths):
         raise ValueError("Supply distinct A/B artifact paths")
     rows, calls = [], {"control": [], "challenger": []}
-    experiment = digest = None
+    experiment = digest = control_digest = generation_options = None
     hashes = {}
     planned = 0
     for path in paths:
         payload = read(path)
         meta = payload["ab_experiment"]
+        control, flags = analysis_configuration(payload)
         if experiment is None:
-            experiment, digest = meta["id"], meta["challenger_sha256"]
-        if (meta["id"], meta["challenger_sha256"]) != (experiment, digest):
-            raise ValueError("Do not pool experiments or challenger packs")
+            experiment, digest, control_digest, generation_options = meta["id"], meta["challenger_sha256"], control, flags
+        if (meta["id"], meta["challenger_sha256"], control) != (experiment, digest, control_digest):
+            raise ValueError("Do not pool experiments or challenger/control packs")
+        if flags != generation_options:
+            raise ValueError("Do not pool mixed A/B generation-option fingerprints")
         hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
         planned += payload["planned_count"]
         by_index = {}
@@ -224,7 +259,8 @@ def make_report(artifacts, *, canary=None, spot_check=None, held_out=None, sched
             if (assignment != scope.get("ab_assignment") or entry["objective_id"] != scope["objective_id"]
                     or assignment["experiment"] != experiment or assignment["challenger_sha256"] != digest
                     or assignment["arm"] not in calls
-                    or assignment["prompt_pack_sha256"] != (digest if assignment["arm"] == "challenger" else None)
+                    or assignment.get("control_sha256") != control_digest
+                    or assignment["prompt_pack_sha256"] != (digest if assignment["arm"] == "challenger" else control_digest)
                     or entry["index"] in by_index):
                 raise ValueError("Candidate differs from frozen A/B assignment")
             by_index[entry["index"]] = assignment["arm"]
@@ -253,11 +289,20 @@ def make_report(artifacts, *, canary=None, spot_check=None, held_out=None, sched
         reasons.append("Canaries require at least 20 observed cases per defect type")
     if len(rows) != planned or stats["incomplete_pairs"]:
         reasons.append("Incomplete planned candidates or arm pairs; no outcome-driven exclusions")
-    if not stats["sequential"]["yield_improved"]:
-        reasons.append("Always-valid objective-cluster lower bound does not exceed zero")
+    if not stats["permutation"]["yield_improved"]:
+        reasons.append("No significant objective-cluster yield gain at a predeclared 80/160-pair look")
+    def bound_options(value):
+        options = value.get("generation_options", {})
+        return (isinstance(options, dict)
+                and all(type(options.get(name, False)) is bool for name in ("plan_freshness_lint", "scenario_hint_cap"))
+                and tuple(options.get(name, False) for name in ("plan_freshness_lint", "scenario_hint_cap")) == generation_options)
     if (not isinstance(schedule, dict) or schedule.get("experiment") != experiment
             or schedule.get("challenger_sha256") != digest
+            or schedule.get("control_sha256") != control_digest
+            or not bound_options(schedule)
             or schedule.get("independent_objectives_no_interference") is not True
+            or schedule.get("pair_horizon") != 160
+            or schedule.get("paired_looks") != list(PREDECLARED_LOOKS)
             or [str(Path(p).resolve()) for p in schedule.get("artifacts", [])][:len(paths)] != list(hashes)):
         reasons.append("Missing predeclared cumulative artifact schedule / independent-objective assumptions")
     before, after = (arms[name]["council_given_doccheck"] for name in ("control", "challenger"))
@@ -269,7 +314,8 @@ def make_report(artifacts, *, canary=None, spot_check=None, held_out=None, sched
             reasons.append("Missing guardrail evidence or regression: " + name)
     def bound_audit(value):
         return (isinstance(value, dict) and value.get("complete") is True
-            and value.get("experiment") == experiment and value.get("challenger_sha256") == digest)
+            and value.get("experiment") == experiment and value.get("challenger_sha256") == digest
+            and value.get("control_sha256") == control_digest and bound_options(value))
     if (not bound_audit(spot_check) or type(spot_check.get("pairs")) is not int or spot_check["pairs"] < 10
             or type(spot_check.get("losses")) is not int or not 0 <= spot_check["losses"] < 7
             or spot_check["losses"] > spot_check["pairs"]
@@ -280,6 +326,8 @@ def make_report(artifacts, *, canary=None, spot_check=None, held_out=None, sched
         reasons.append("Missing fresh-family 30-item held-out judge confirmation")
     decision.update(promote=not reasons)
     return {"version": 1, "experiment": experiment, "challenger_sha256": digest,
+        **({"control_sha256": control_digest} if control_digest is not None else {}),
+        "generation_options": dict(zip(("plan_freshness_lint", "scenario_hint_cap"), generation_options)),
         "artifact_sha256": hashes, "planned_candidates": planned, "arms": arms,
         "paired": stats, "promotion": decision,
         "guardrail_definitions": {

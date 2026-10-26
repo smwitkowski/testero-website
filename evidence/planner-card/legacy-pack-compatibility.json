@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "baseline": "4ec65d0",
+  "cases": [
+    {
+      "case": "identity",
+      "sha256": "7888c98427ca70d91eeee83af55872cb6aaf62f23de407073d7ff5c4426a3e51",
+      "identical": true
+    },
+    {
+      "case": "instructions",
+      "sha256": "c2d5d1db131e90ebc1cf8236a3f9862db832158f2d6a53796d935b76b71a0c1f",
+      "identical": true
+    },
+    {
+      "case": "experiment-A-components",
+      "sha256": "304dcb997b88c21c43faf4f608c1449adf586e3df14ef59aee661e2cd9bf4f44",
+      "identical": true
+    }
+  ]
+}

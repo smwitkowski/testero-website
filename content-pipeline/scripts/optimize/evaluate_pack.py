@@ -9,16 +9,20 @@ from __future__ import annotations
 import argparse
 from contextlib import nullcontext
 from copy import deepcopy
+from fractions import Fraction
 import hashlib
 import json
 import os
 from pathlib import Path
 from unittest.mock import patch
 
+from scripts.optimize.cluster_statistics import sign_flip_test
+
 SEATS = ("claude.blind_solver", "claude.style", "claude.evidence", "argon.blind", "argon.review")
 WRITER_STAGES = frozenset(("plan", "verify", "write", "cite", "taxonomy"))
-PROMOTION_RULE = ("Promote only if held-out all-council pass rate improves, no seat drops by more than "
-                  "5 percentage points, canary catch remains 100%, and all calls/usage are complete.")
+PROMOTION_RULE = ("Promote only if held-out all-council pass rate improves, no seat has a one-sided "
+                  "objective-cluster sign-flip regression at alpha .05 or a drop of at least 10 percentage "
+                  "points, canary catch remains 100%, and all calls/usage are complete.")
 CANARY_DEFECTS = ("swapped_key", "retired_name")
 COUNCIL_NOTE = ("Production has five downstream council calls (Claude blind/style/evidence and Argon blind/review). "
                 "Doccheck is the sixth overall check, upstream of council. The task's six downstream seats "
@@ -59,6 +63,39 @@ def writer_token_usage(calls):
             "complete": complete, "definition": "provider input + output tokens for plan/proof/draft/citation/taxonomy; cached input counted once"}
 
 
+def seat_objective_counts(judged):
+    """Preserve observed full-council denominators for clustered seat checks."""
+    counts = {}
+    for row in judged:
+        cluster = counts.setdefault(row["objective_id"], {"count": 0, "passes": dict.fromkeys(SEATS, 0)})
+        cluster["count"] += 1
+        for name in SEATS:
+            cluster["passes"][name] += row["seats"][name]
+    return {objective: counts[objective] for objective in sorted(counts)}
+
+
+def seat_regression_statistics(baseline, packed, name):
+    """Test paired objective seat-rate differences among observed council rows.
+
+    Council reach is selected by upstream gates; this conditional diagnostic
+    does not identify a causal effect for skipped votes. Never impute them.
+    Point-drop protection uses the original observed-arm pass rates. The
+    permutation test gives each commonly observed objective equal weight.
+    """
+    before, after = (arm.get("seat_objectives") for arm in (baseline, packed))
+    if not isinstance(before, dict) or not isinstance(after, dict):
+        return {"p_value": None, "clusters": 0, "complete": False}
+    differences = []
+    for objective in sorted(before.keys() & after.keys()):
+        old, new = before[objective], after[objective]
+        differences.append(Fraction(new["passes"][name], new["count"])
+                           - Fraction(old["passes"][name], old["count"]))
+    return {**sign_flip_test(differences, alternative="less"), "complete": True,
+            "alpha": .05, "difference": float(sum(differences) / len(differences)) if differences else None,
+            "unmatched_objectives": len(before.keys() ^ after.keys()),
+            "estimand": "equal-weight common-objective difference in observed full-council seat pass rates"}
+
+
 def summarize_arm(result):
     candidates = result["candidates"]
     if not candidates:
@@ -81,6 +118,7 @@ def summarize_arm(result):
             "doccheck_pass_rate": sum(attempts) / len(attempts) if attempts else None,
             "doccheck_candidate_pass_rate": sum(row.get("doccheck_passed") is True for row in candidates) / len(candidates),
             "council_count": len(judged), "council_pass_rate": council_passed / len(judged) if judged else None,
+            "seat_objectives": seat_objective_counts(judged),
             "seat_pass_rates": {name: sum(row["seats"][name] for row in judged) / len(judged) if judged else None for name in SEATS},
             "accepted": accepted, "accepted_per_million_writer_tokens": accepted * 1_000_000 / tokens if tokens and usage.get("complete") is True else None,
             "writer_usage": usage, "complete": result.get("complete") is True and usage.get("complete") is True}
@@ -93,10 +131,19 @@ def promotion_decision(baseline, packed, canary=None):
     before, after = baseline["council_pass_rate"], packed["council_pass_rate"]
     if before is None or after is None or after <= before:
         reasons.append("Held-out all-council pass rate did not improve")
+    seat_tests = {}
     for name in SEATS:
         old, new = baseline["seat_pass_rates"][name], packed["seat_pass_rates"][name]
-        if old is None or new is None or new < old - .05 - 1e-12:
-            reasons.append("Missing evidence or >5pp regression: " + name)
+        test = seat_regression_statistics(baseline, packed, name)
+        seat_tests[name] = test
+        if old is None or new is None:
+            reasons.append("Missing seat evidence: " + name)
+        elif old - new >= .10 - 1e-12:
+            reasons.append("Seat pass-rate drop >=10pp: " + name)
+        elif not test["complete"] and new < old - 1e-12:
+            reasons.append("Missing objective-cluster seat evidence: " + name)
+        elif test["complete"] and test["p_value"] <= .05:
+            reasons.append("Significant one-sided objective-cluster seat regression: " + name)
     # A bare numeric 1 is insufficient: bind canary outcomes to actual cohort
     # counts from the existing council_health evaluate flow.
     if (not isinstance(canary, dict) or canary.get("kind") != "canaries"
@@ -106,7 +153,7 @@ def promotion_decision(baseline, packed, canary=None):
             or any(type(row.get("count")) is not int or row["count"] < 20 or row.get("catch_rate") != 1
                    or row.get("full") is not True for row in canary["canaries"].values())):
         reasons.append("Canary catch is not proven 100% for a complete current cohort")
-    return {"promote": not reasons, "rule": PROMOTION_RULE, "reasons": reasons}
+    return {"promote": not reasons, "rule": PROMOTION_RULE, "reasons": reasons, "seat_tests": seat_tests}
 
 
 def canary_commands(artifact, output_dir):

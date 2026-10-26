@@ -1,0 +1,42 @@
+{
+  "invocations": [
+    {
+      "invocations": 1,
+      "objective_id": "machine-learning-engineer:standard:1.1:1",
+      "prompt_sha256": "a7f5e9bc2cfc41545b66286d7e76a4c1f3db811197c44ba30372dd88b7dc8e9d",
+      "state": "failed_auth_stripped_by_env_i"
+    },
+    {
+      "invocations": 1,
+      "objective_id": "machine-learning-engineer:standard:1.2:3",
+      "prompt_sha256": "849ce320bd4563f6b97710b194c8b6a58731b5c22629bc7d3db042c5e435d9e8",
+      "state": "frozen"
+    },
+    {
+      "invocations": 1,
+      "objective_id": "machine-learning-engineer:standard:3.2:4",
+      "prompt_sha256": "ead2bc93f1c0582e3d88159131437e97f3344c27be36d5460666df96f5946f60",
+      "state": "interrupted_no_retry"
+    },
+    {
+      "invocations": 1,
+      "objective_id": "machine-learning-engineer:standard:3.2:6",
+      "prompt_sha256": "5541a94a656cc461dc30522570dc131896720cc71f2feef77fe0f17e0395b0d1",
+      "state": "frozen"
+    },
+    {
+      "invocations": 1,
+      "objective_id": "machine-learning-engineer:standard:3.3:2",
+      "prompt_sha256": "9449cb3913ec84a88b7c06d590bbd7630ee91c7e2d8d30e882aa5cd6986cd828",
+      "state": "frozen"
+    },
+    {
+      "invocations": 1,
+      "objective_id": "machine-learning-engineer:standard:5.1:3",
+      "prompt_sha256": "cccce4b6a6eb36e791a448ad5b2299ecaa39c5b2e4973bcb5b212e5942e0642d",
+      "state": "frozen"
+    }
+  ],
+  "no_retries": true,
+  "total_invocations": 6
+}

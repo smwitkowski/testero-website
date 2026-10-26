@@ -7,7 +7,7 @@ import re
 ARMS = ("control", "challenger")
 
 
-def interleave_plan(plan, *, experiment, seed, pack_sha256, cohort="default"):
+def interleave_plan(plan, *, experiment, seed, pack_sha256, cohort="default", control_pack_sha256=None):
     """Expand each preselected scope to a randomized adjacent arm pair.
 
     Input scopes represent half the candidate budget. Outcome-adaptive objective
@@ -18,6 +18,9 @@ def interleave_plan(plan, *, experiment, seed, pack_sha256, cohort="default"):
         raise ValueError("A/B requires a safe --ab-experiment ID")
     if type(seed) is not int or not re.fullmatch(r"[0-9a-f]{64}", pack_sha256):
         raise ValueError("A/B requires an integer seed and challenger pack SHA256")
+    if control_pack_sha256 is not None and (not isinstance(control_pack_sha256, str)
+                                          or not re.fullmatch(r"[0-9a-f]{64}", control_pack_sha256)):
+        raise ValueError("A/B control pack requires a SHA256")
     result = []
     counts = {}
     for scope in plan:
@@ -33,7 +36,9 @@ def interleave_plan(plan, *, experiment, seed, pack_sha256, cohort="default"):
             row["ab_assignment"] = {"experiment": experiment, "cohort": cohort, "arm": arm,
                 "pair_id": pair_id, "objective_pair": ordinal, "seed": seed,
                 "challenger_sha256": pack_sha256,
-                "prompt_pack_sha256": pack_sha256 if arm == "challenger" else None}
+                "prompt_pack_sha256": pack_sha256 if arm == "challenger" else control_pack_sha256}
+            if control_pack_sha256 is not None:
+                row["ab_assignment"]["control_sha256"] = control_pack_sha256
             result.append(row)
     return result
 

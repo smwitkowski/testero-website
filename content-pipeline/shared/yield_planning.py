@@ -6,9 +6,11 @@ from shared.near_duplicates import comparison_row, tokens
 
 MAX_SCENARIOS = 12
 SUMMARY_CHARS = 240
+MAX_UNMAPPED_HINTS = 3
+MIN_OBJECTIVE_TOKEN_OVERLAP = 2
 
 
-def existing_scenarios(scope, bank, candidates, planned=()):
+def existing_scenarios(scope, bank, candidates, planned=(), *, scenario_hint_cap=False):
     """Prefer batch history and exact mappings; unmapped exports are relevance hints."""
     objective = scope["objective_id"]
     rows = []
@@ -23,16 +25,28 @@ def existing_scenarios(scope, bank, candidates, planned=()):
     unmapped = [row for row in bank if not row.get("objective_id")]
     unmapped = [row for row in unmapped if vocabulary & tokens(row["stem"] + " " + row["key"])]
     unmapped.sort(key=lambda row: len(vocabulary & tokens(row["stem"] + " " + row["key"])), reverse=True)
+    if scenario_hint_cap:
+        # Use the exact objective, not all services/objectives in its subsection.
+        objective_vocabulary = tokens(scope["objective_text"])
+        unmapped = [row for row in unmapped
+                    if len(objective_vocabulary & tokens(row["stem"] + " " + row["key"]))
+                    >= MIN_OBJECTIVE_TOKEN_OVERLAP]
+        unmapped.sort(key=lambda row: len(objective_vocabulary & tokens(row["stem"] + " " + row["key"])), reverse=True)
     selected = []
     seen = set()
+    unmapped_count = 0
     for row in [*reversed(rows), *exact, *unmapped]:
         summary = {"stem_summary": " ".join(row["stem"].split())[:SUMMARY_CHARS],
                    "keyed_action": " ".join(row["key"].split())[:SUMMARY_CHARS],
                    "attribution": "unmapped_export_hint" if row in unmapped else "selected_objective"}
         pair = (summary["stem_summary"], summary["keyed_action"])
         if pair not in seen:
+            is_unmapped = summary["attribution"] == "unmapped_export_hint"
+            if scenario_hint_cap and is_unmapped and unmapped_count >= MAX_UNMAPPED_HINTS:
+                continue
             selected.append(summary)
             seen.add(pair)
+            unmapped_count += int(is_unmapped)
         if len(selected) == MAX_SCENARIOS:
             break
     return selected

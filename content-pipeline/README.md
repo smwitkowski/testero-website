@@ -347,7 +347,9 @@ PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.ab_report \
 Use the **actual artifact path** printed by `run_domain_batch` in the report
 command and schedule; the example name is not an automatically created fixture.
 `schedule` is predeclared JSON with `experiment`, `challenger_sha256`, ordered
-absolute `artifacts`, and `independent_objectives_no_interference: true`.
+absolute `artifacts`, `independent_objectives_no_interference: true`,
+`pair_horizon: 160`, and
+`paired_looks: [{"pairs": 80, "alpha": 0.005}, {"pairs": 160, "alpha": 0.045}]`.
 Do not assert this certificate unless it is justified: production histories and
 dedup can couple objectives. Without it the report stays descriptive and cannot
 promote. `spot-check` binds the same experiment/hash and requires `complete:true`,
@@ -357,14 +359,104 @@ A canary report must prove 100% catch with ≥20 examples per defect type.
 
 The report gives per-arm yield, P(council pass | doccheck pass), seat/guardrail
 rates and equal-weight paired objective differences with clustered standard
-errors. Its always-valid decision uses conservative objective-cluster Hoeffding
-bounds with alpha spending across predeclared pair prefixes, **not** repeated
-fixed-look z tests. Few objective clusters give wide bounds. Argon
+errors. Its one-sided objective-cluster sign-flip test uses equal-weight
+objective means. Only 80 complete pairs (alpha 0.005, look 1) and 160 complete
+pairs (alpha 0.045, look 2) can decide. All other prefixes, including >160, are
+descriptive; do not keep sampling until significant. The report includes a
+cluster-bootstrap 95% interval and the old Hoeffding values as non-deciding
+secondary fields. The sign-flip test assumes independent, sign-exchangeable
+objective differences under the null; a zero grand mean alone is insufficient. Argon
 literal-elimination/evidence-gap screens are explicitly issue-text diagnostics,
 not new semantic judges. Generic keys must remain ≤20%; conditional council rate
 cannot drop >5pp; literal/evidence/echo/duplicate rates cannot rise. Missing
 telemetry, votes, pairs, assumptions or audits blocks promotion through the reused
-`promotion_decision` gate. Reports never publish.
+`promotion_decision` gate. A seat blocks on a drop of at least 10 percentage
+points or a one-sided objective-cluster sign-flip p-value at most 0.05. Missing
+objective-cluster evidence for an observed drop fails closed. Canary catch must
+stay 100%; factual-defect blocks are unchanged. Reports never publish.
+
+### Frozen doc-reality cards (PMLE, opt-in)
+
+These tools do not change the running Experiment A. Cards and both planner
+checks are off unless selected explicitly. Do not enable them mid-experiment.
+Cards enter only the matching objective's writer instructions, never
+`scope["domain_prompt"]` or documentation-check inputs.
+
+Prepare from the two historical generation directories and frozen corpus named
+in `scripts/optimize/build_planner_cards.py`, without model or search calls:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.build_planner_cards \
+  --prepare-only --output-dir "$ROOT/.cache/optimize/cards"
+```
+
+The builder uses only pre-2026-10-26T00:00Z doc-check veto reasons and dated
+lifecycle passages. It excludes experiment-tagged/A/B artifacts and canary/gold
+objectives. Use repeated `--cohort /absolute/manifest.json` and
+`--exclude-objective OBJECTIVE_ID` for any separately stored held-outs. Historical
+artifacts without creation timestamps use mtime as a conservative upper bound;
+post-cutoff copies are excluded. A card needs at least three vetoed candidates
+and each selected coverage claim needs two distinct candidates. Shared product
+names alone do not establish repeated claims. The audit retains the exact
+associations, input hashes, and dated lifecycle sources.
+
+Remove `--prepare-only` to make at most one tool-disabled Claude CLI call per
+eligible objective. No OpenRouter, Exa, or Gemini calls are used. A durable
+started marker prevents re-calling an objective, including after failure. Inspect
+and freeze the output before an experiment; do not rebuild from its outcomes.
+Cards have three sections, at most 1,200 characters, and deterministic text lint.
+Coverage gaps describe the supplied pages, not product impossibility.
+
+Emit a standalone v5 card challenger, or add cards to an existing plan pack:
+
+```sh
+PYTHON_DOTENV_DISABLED=1 uv run python -m scripts.optimize.build_card_pack \
+  --cards "$ROOT/.cache/optimize/cards/pmle-planner-cards-v1.json" \
+  --output "$PACKS/pmle-cards-v1.json"
+# Add --base-pack "$PACKS/zero-cost-pmle-v5.json" for A+card.
+```
+
+Use `--prompt-pack "$PACKS/pmle-cards-v1.json" --ab-interleaved` for card vs plain.
+For A+card vs A, emit with `--base-pack` and also pass
+`--ab-control-pack "$PACKS/zero-cost-pmle-v5.json"` to generation/batch/nightly.
+Without `--ab-control-pack`, the control remains the unchanged plain writer.
+Both pack hashes bind assignments and analysis; do not mix different control
+packs in one experiment. With an explicit control pack, the schedule, blinded
+human audit, and held-out audit JSON must also include `control_sha256` matching
+that pack. The emitter never overwrites an existing output.
+
+Nightly JSON uses `"prompt_pack": "/absolute/card-pack.json"`,
+`"ab_interleaved": true`, an explicit `"ab_experiment"`, and optional
+`"ab_control_pack": "/absolute/base-pack.json"`. The control-pack CLI flag and
+config key are absent by default. Existing pack files without `lessons` retain
+their previous hashes and rendered writer context.
+
+Two separate planner checks can be enabled on generate, batch, or nightly:
+
+| Piece | CLI flag | Nightly JSON key | Effect |
+|---|---|---|---|
+| Lifecycle/current-name check | `--plan-freshness-lint` | `"plan_freshness_lint": true` | Re-plan before doc fetch within the same three-attempt budget. |
+| Scenario-hint cap | `--scenario-hint-cap` | `"scenario_hint_cap": true` | At most three unmapped hints, each sharing two normalized exact-objective tokens. |
+
+Both checks apply to both arms when explicitly enabled. Test them at a new
+experiment boundary, separately from the card unless that combination is the
+predeclared treatment. Missing/false keys preserve old commands, prompts, and
+artifact shapes. Mixed flag settings cannot be pooled in an A/B report.
+The schedule, blinded human audit, and held-out audit JSON must bind enabled
+checks with `"generation_options": {"plan_freshness_lint": true,
+"scenario_hint_cap": false}` (use the actual boolean settings). A missing map
+means both checks are off. Reported `generation_options` records the normalized
+settings; audit data from a different setting cannot authorize promotion.
+
+Planner-only lifecycle facts are in `certs/product-lexicon.json` under
+`planner_products`; the existing learner/v6 `products` list is unchanged.
+Retired recommended destinations trigger re-planning. Existing-system and
+explicit migration-source mentions remain valid. Renamed names are checked in
+`existing_system`, `best_action`, and all mistake actions. Deprecated is not
+retired: Optimized online serving has a future sunset and is nonblocking.
+Frozen lifecycle entries need review at future experiment boundaries; they do
+not silently advance status using the wall clock. All doc checks, independent
+judges, and publication gates remain unchanged.
 
 **6. GEPA plan: 250 metric calls, 13 PMLE dev objectives ×3 inputs.**
 `--dev-examples 39 --dev-objectives 13` enforces the requested slice. If saved
