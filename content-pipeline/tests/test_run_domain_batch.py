@@ -312,7 +312,7 @@ def test_resume_requires_artifact_owning_pipeline_for_future_generation(monkeypa
 
 
 @pytest.mark.parametrize("error_class,partial", [("CandidateRejected", True), ("CLIAuthError", False),
-                                               ("CLIUsageLimitError", False), ("BudgetError", False),
+                                               ("CLIUsageLimitError", False), ("BudgetError", True),
                                                ("RateLimitError", False), ("UnrecognizedError", False)])
 def test_nightly_typed_result_only_ordinary_failures_can_continue(monkeypatch, tmp_path, error_class, partial):
     import json
