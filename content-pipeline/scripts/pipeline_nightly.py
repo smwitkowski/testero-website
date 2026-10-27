@@ -84,7 +84,10 @@ def publications_today(client, now):
 
 
 def commands_for_batch(batch, tag, *, state_dir, tools, live=False, limit=10,
-                       prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0, doccheck_policy="v5"):
+                       prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0, doccheck_policy="v5",
+                       plan_freshness_lint=False, scenario_hint_cap=False, ab_control_pack=None):
+    if type(plan_freshness_lint) is not bool or type(scenario_hint_cap) is not bool:
+        raise ValueError("Nightly planner experiment keys must be booleans")
     cert = batch["cert"]
     base = (PIPELINE / ".cache/generation").resolve() / (cert + "-v5-" + tag)
     report = Path(state_dir) / (tag + ".publish.json")
@@ -95,8 +98,16 @@ def commands_for_batch(batch, tag, *, state_dir, tools, live=False, limit=10,
         raise ValueError("Unsupported nightly doccheck policy")
     if doccheck_policy != "v5":
         generate += ["--doccheck-policy", doccheck_policy]
+    if plan_freshness_lint:
+        generate += ["--plan-freshness-lint"]
+    if scenario_hint_cap:
+        generate += ["--scenario-hint-cap"]
     if prompt_pack is not None:
         generate += ["--prompt-pack", str(prompt_pack)]
+    if ab_control_pack is not None:
+        if not ab_interleaved:
+            raise ValueError("Nightly --ab-control-pack requires --ab-interleaved")
+        generate += ["--ab-control-pack", str(ab_control_pack)]
     if ab_interleaved:
         if prompt_pack is None or not ab_experiment or batch["count"] % 2:
             raise ValueError("Nightly A/B requires a pack, experiment ID and even batch counts")
@@ -150,7 +161,8 @@ def notify(report, config, state, state_path, now, *, immediate=False, deliver=s
 def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run, client=None):
     state_dir, tools = Path(state_dir), Path(tools)
     report = {"status": "planned", "mode": "shadow", "batches": [], "at": now.isoformat()}
-    experiment = {key: config[key] for key in ("prompt_pack", "ab_interleaved", "ab_experiment", "ab_seed", "doccheck_policy") if key in config}
+    experiment = {key: config[key] for key in ("prompt_pack", "ab_interleaved", "ab_experiment", "ab_seed", "doccheck_policy",
+                                              "plan_freshness_lint", "scenario_hint_cap", "ab_control_pack") if key in config}
     report["generation_experiment"] = experiment
     planned = plan(coverage, now, batches=config.get("batches", 2), count=config.get("count", 40))
     report["coverage"] = planned["coverage"]
@@ -378,10 +390,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--prompt-pack", type=Path)
+    parser.add_argument("--ab-control-pack", type=Path)
     parser.add_argument("--ab-interleaved", action="store_true", default=None)
     parser.add_argument("--ab-experiment")
     parser.add_argument("--ab-seed", type=int)
     parser.add_argument("--doccheck-policy", choices=("v5", "v6"))
+    parser.add_argument("--plan-freshness-lint", action="store_true", default=None)
+    parser.add_argument("--scenario-hint-cap", action="store_true", default=None)
     parser.add_argument("--coverage", type=Path, help="Required offline: local complete coverage export; live reads fresh DB after preflight")
     parser.add_argument("--tools-dir", type=Path, required=True)
     parser.add_argument("--state-dir", type=Path, required=True)
@@ -392,7 +407,8 @@ def main():
     args = parser.parse_args()
     try:
         config = json.loads(args.config.read_text())
-        for key in ("prompt_pack", "ab_interleaved", "ab_experiment", "ab_seed", "doccheck_policy"):
+        for key in ("prompt_pack", "ab_interleaved", "ab_experiment", "ab_seed", "doccheck_policy",
+                    "plan_freshness_lint", "scenario_hint_cap", "ab_control_pack"):
             value = getattr(args, key)
             if value is not None:
                 config[key] = str(value) if isinstance(value, Path) else value
