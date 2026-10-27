@@ -51,9 +51,13 @@ def run(command, *, output=None):
                           stderr=subprocess.DEVNULL, timeout=21600, check=False).returncode
 
 
-def preflight(*, execute=run, environ=None, check=None):
+def preflight(*, execute=run, environ=None, check=None, second_seat_transport="openrouter"):
+    from shared.argon_gate import model_for_transport
+    model_for_transport(second_seat_transport)
     environ = os.environ if environ is None else environ
-    if any(not environ.get(key) for key in REQUIRED_KEYS):
+    required = (REQUIRED_KEYS if second_seat_transport == "openrouter" else
+                tuple(key for key in REQUIRED_KEYS if key != "OPENROUTER_API_KEY"))
+    if any(not environ.get(key) for key in required):
         raise ValueError("Runtime credential injection is incomplete")
     # Coordinator-only. Authentication and quota probes never print auth state.
     probes = [["claude", "auth", "status"], ["codex", "login", "status"],
@@ -66,9 +70,10 @@ def preflight(*, execute=run, environ=None, check=None):
             raise ValueError("Authentication/quota probe failed; checkpoint and stop")
 
 
-def paused(tools):
-    if (Path(tools) / "PIPELINE_PAUSED").exists():
-        raise ValueError("PIPELINE_PAUSED is present")
+def paused(tools, *, second_seat_transport="openrouter"):
+    from shared.council_configuration import is_paused
+    if is_paused(pause=Path(tools) / "PIPELINE_PAUSED", second_seat_transport=second_seat_transport):
+        raise ValueError("PIPELINE_PAUSED is present for the selected council")
 
 
 def export_snapshot(client, now):
@@ -85,7 +90,10 @@ def publications_today(client, now):
 
 def commands_for_batch(batch, tag, *, state_dir, tools, live=False, limit=10,
                        prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0, doccheck_policy="v5",
-                       plan_freshness_lint=False, scenario_hint_cap=False, ab_control_pack=None):
+                       plan_freshness_lint=False, scenario_hint_cap=False, ab_control_pack=None,
+                       second_seat_transport="openrouter"):
+    from shared.argon_gate import model_for_transport
+    model_for_transport(second_seat_transport)
     if type(plan_freshness_lint) is not bool or type(scenario_hint_cap) is not bool:
         raise ValueError("Nightly planner experiment keys must be booleans")
     cert = batch["cert"]
@@ -94,6 +102,8 @@ def commands_for_batch(batch, tag, *, state_dir, tools, live=False, limit=10,
     generate = [sys.executable, "-m", "scripts.run_domain_batch", batch["section"], tag, cert,
                 "--count", str(batch["count"]), "--parallel", "2",
                 "--nightly-result", str(Path(state_dir) / (tag + ".batch.json"))]
+    if second_seat_transport != "openrouter":
+        generate += ["--second-seat-transport", second_seat_transport]
     if doccheck_policy not in ("v5", "v6"):
         raise ValueError("Unsupported nightly doccheck policy")
     if doccheck_policy != "v5":
@@ -115,11 +125,18 @@ def commands_for_batch(batch, tag, *, state_dir, tools, live=False, limit=10,
                      "--ab-seed", str(ab_seed)]
     publish = [sys.executable, "-m", "scripts.publish_batch", "--artifact", str(base) + ".json",
                "--verdicts", str(base) + ".verdicts", "--limit", str(limit), "--report", str(report)]
+    if second_seat_transport != "openrouter":
+        publish += ["--health-state", str(Path(tools) / "council-health.json"),
+                    "--health-pause", str(Path(tools) / "PIPELINE_PAUSED")]
     publish += ["--apply"] if live else ["--read-db", "--dry-run"]
     return [("generate-judge-ingest", generate), ("publish", publish)]
 
 
 def monitor_commands(config, run_dir, tools, seed):
+    from shared.argon_gate import model_for_transport
+    transport = config.get("second_seat_transport", "openrouter")
+    model_for_transport(transport)
+    seat_args = ["--second-seat-transport", transport] if transport != "openrouter" else []
     commands = []
     for kind, artifacts in (("canaries", config.get("health_artifacts")), ("gold", config.get("gold_artifacts"))):
         if not isinstance(artifacts, list) or not artifacts:
@@ -127,14 +144,15 @@ def monitor_commands(config, run_dir, tools, seed):
         root = Path(run_dir) / kind
         prepare = [sys.executable, "-m", "scripts.council_health", "prepare", "--out", str(root),
                    "--seed", str(seed), "--per-type", "2"]
+        prepare += seat_args
         if kind == "gold":
             prepare += ["--gold"]
         for artifact in artifacts:
             prepare += ["--artifact", str(artifact)]
         commands.extend([(kind + "-prepare", prepare),
-                         (kind + "-judge", [sys.executable, "-m", "scripts.council_health", "live", "--root", str(root), "--coordinator-approved"]),
+                         (kind + "-judge", [sys.executable, "-m", "scripts.council_health", "live", "--root", str(root), "--coordinator-approved", *seat_args]),
                          (kind + "-evaluate", [sys.executable, "-m", "scripts.council_health", "evaluate", "--root", str(root),
-                                               "--state", str(Path(tools) / "council-health.json"), "--pause", str(Path(tools) / "PIPELINE_PAUSED")])])
+                                               "--state", str(Path(tools) / "council-health.json"), "--pause", str(Path(tools) / "PIPELINE_PAUSED"), *seat_args])])
     return commands
 
 
@@ -161,8 +179,12 @@ def notify(report, config, state, state_path, now, *, immediate=False, deliver=s
 def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run, client=None):
     state_dir, tools = Path(state_dir), Path(tools)
     report = {"status": "planned", "mode": "shadow", "batches": [], "at": now.isoformat()}
+    from shared.argon_gate import model_for_transport
+    transport = config.get("second_seat_transport", "openrouter")
+    model_for_transport(transport)
     experiment = {key: config[key] for key in ("prompt_pack", "ab_interleaved", "ab_experiment", "ab_seed", "doccheck_policy",
-                                              "plan_freshness_lint", "scenario_hint_cap", "ab_control_pack") if key in config}
+                                              "plan_freshness_lint", "scenario_hint_cap", "ab_control_pack",
+                                              "second_seat_transport") if key in config}
     report["generation_experiment"] = experiment
     planned = plan(coverage, now, batches=config.get("batches", 2), count=config.get("count", 40))
     report["coverage"] = planned["coverage"]
@@ -182,6 +204,11 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
                                            "--verdicts", str(queue_dir / "verdicts"), "--judge-model", "claude", "--argon-gate", "--full-gate-sample", "1"]),
                       ("recouncil-evaluate", common + ["--verdict-dir", str(queue_dir / "verdicts"), "--report", str(run_dir / "recouncil.json")]
                        + (["--apply"] if publication_live else ["--dry-run"]))]
+    if transport != "openrouter":
+        for name, command in queue_commands:
+            command += ["--second-seat-transport", transport]
+            if name == "recouncil-evaluate":
+                command += ["--health-state", str(tools / "council-health.json")]
     monitors = monitor_commands(config, run_dir, tools, int(now.strftime("%Y%m%d")))
     report["commands"] = monitors + preview + queue_commands
     if not live:
@@ -219,7 +246,7 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
             if not read_only:
                 if hard_stop:
                     raise HardStop("Paid/write stages already stopped")
-                paused(tools)
+                paused(tools, second_seat_transport=transport)
                 if "--apply" in command and not (tools / "PUBLISH_LIVE").is_file():
                     raise HardStop("PUBLISH_LIVE removed before a write stage")
                 report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"), cap_overrides=config.get("cap_overrides"))
@@ -247,10 +274,11 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
 
         try:
             # Pause/budget checks precede even the subscription model probes.
-            paused(tools)
+            paused(tools, second_seat_transport=transport)
             report["budget"] = accounting(load_calls(config["calls_root"]), datetime.now(timezone.utc), rates=config.get("rates"), cap_overrides=config.get("cap_overrides"))
-            preflight(execute=execute, check=lambda: paused(tools))
-            paused(tools)
+            preflight(execute=execute, check=lambda: paused(tools, second_seat_transport=transport),
+                      **({"second_seat_transport": transport} if transport != "openrouter" else {}))
+            paused(tools, second_seat_transport=transport)
             from scripts.retire_legacy import get_client
             client = client or get_client()
             fresh = export_snapshot(client, now)
@@ -263,6 +291,10 @@ def nightly(config, *, coverage, tools, state_dir, now, live=False, execute=run,
                 step(name, command, output=output)
                 if output:
                     report.setdefault("health", {})[name] = json.loads(output.read_text())
+            if transport != "openrouter":
+                from shared.council_configuration import require_ready
+                require_ready(state=tools / "council-health.json", pause=tools / "PIPELINE_PAUSED",
+                              second_seat_transport=transport)
             for index, batch in enumerate(planned["batches"]):
                 tag = now.strftime("night-%Y%m%d") + "-" + str(index + 1)
                 used = publications_today(client, datetime.now(timezone.utc))
@@ -395,6 +427,7 @@ def main():
     parser.add_argument("--ab-experiment")
     parser.add_argument("--ab-seed", type=int)
     parser.add_argument("--doccheck-policy", choices=("v5", "v6"))
+    parser.add_argument("--second-seat-transport", choices=("openrouter", "codex"))
     parser.add_argument("--plan-freshness-lint", action="store_true", default=None)
     parser.add_argument("--scenario-hint-cap", action="store_true", default=None)
     parser.add_argument("--coverage", type=Path, help="Required offline: local complete coverage export; live reads fresh DB after preflight")
@@ -408,7 +441,7 @@ def main():
     try:
         config = json.loads(args.config.read_text())
         for key in ("prompt_pack", "ab_interleaved", "ab_experiment", "ab_seed", "doccheck_policy",
-                    "plan_freshness_lint", "scenario_hint_cap", "ab_control_pack"):
+                    "plan_freshness_lint", "scenario_hint_cap", "ab_control_pack", "second_seat_transport"):
             value = getattr(args, key)
             if value is not None:
                 config[key] = str(value) if isinstance(value, Path) else value

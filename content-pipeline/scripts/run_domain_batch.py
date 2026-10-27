@@ -74,13 +74,16 @@ def export_questions(url, key, exam, path, *, fetch=None):
 
 def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resume=None, doccheck_policy="v5",
                    prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0,
-                   plan_freshness_lint=False, scenario_hint_cap=False, ab_control_pack=None):
+                   plan_freshness_lint=False, scenario_hint_cap=False, ab_control_pack=None,
+                   second_seat_transport="openrouter"):
     """Build one gated batch; ``all`` keeps the full weighted cert plan unfiltered."""
     if (section != "all" and not re.fullmatch(r"[0-9]+\.", section)
             or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", tag)):
         raise ValueError("Section must be all or like 1.; tag must contain only letters, digits, _ or -")
     if doccheck_policy not in ("v5", "v6"):
         raise ValueError("Unsupported doccheck policy")
+    from shared.argon_gate import model_for_transport
+    model_for_transport(second_seat_transport)
     if ab_control_pack is not None and not ab_interleaved:
         raise ValueError("--ab-control-pack requires --ab-interleaved")
     if ab_interleaved and (prompt_pack is None or not ab_experiment or resume is not None
@@ -113,6 +116,8 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
             raise ValueError("Resume count or scope differs from the saved full plan")
         if saved.get("doccheck_policy", "v5") != doccheck_policy:
             raise ValueError("Doccheck policy differs from saved batch")
+        if saved.get("second_seat_transport", "openrouter") != second_seat_transport:
+            raise ValueError("Second-seat transport differs from saved batch")
         control_hash = None
         if ab_control_pack is not None:
             from shared.prompt_pack import load_pack, pack_hash
@@ -141,6 +146,8 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
                 "--parallel", str(parallel), "--gen-effort", "high", "--cite-effort", "medium",
                 "--argon-gate", "--distractor-evidence", "consistent",
                 "--doc-cache", "--verify-stable-prefix", "--artifact", str(artifact)]
+    if second_seat_transport != "openrouter":
+        generate += ["--second-seat-transport", second_seat_transport]
     if prompt_pack is not None:
         generate += ["--prompt-pack", str(prompt_pack)]
     if ab_control_pack is not None:
@@ -163,6 +170,8 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
     generate += ["--existing-questions", str(export), "--continue-quality-rejections"]
     judge = [sys.executable, "scripts/judge_requests.py", "--requests", str(base) + ".judge-requests",
              "--verdicts", str(base) + ".verdicts", "--judge-model", "claude", "--parallel", str(parallel), "--argon-gate"]
+    if second_seat_transport != "openrouter":
+        judge += ["--second-seat-transport", second_seat_transport]
     if ab_interleaved:
         judge += ["--full-gate-sample", "1"]
     ingest = [sys.executable, "scripts/ingest_external_verdicts.py", "--artifact", str(artifact),
@@ -243,6 +252,7 @@ def judge_with_system_retries(command, execute):
 @click.option("--plan-freshness-lint", is_flag=True, help="Opt in to bounded lifecycle/name re-planning before docs.")
 @click.option("--scenario-hint-cap", is_flag=True, help="Opt in to at most 3 relevant unmapped scenario hints.")
 @click.option("--doccheck-policy", type=click.Choice(["v5", "v6"]), default="v5", show_default=True, help="Freeze decision documentation policy; council remains unchanged.")
+@click.option("--second-seat-transport", type=click.Choice(["openrouter", "codex"]), default="openrouter", show_default=True)
 @click.option("--parallel", type=click.IntRange(1, 4), default=3, envvar="PARALLEL", show_default=True)
 @click.option("--retry-attempts", type=click.IntRange(min=0, max=10), default=2, show_default=True,
               help="Extra same-slot attempts for full-plan PDE; gates never change.")
@@ -258,7 +268,8 @@ def judge_with_system_retries(command, execute):
 def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
          acknowledge_saved_system_failures, write, nightly_result, doccheck_policy="v5",
          prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0,
-         plan_freshness_lint=False, scenario_hint_cap=False, ab_control_pack=None):
+         plan_freshness_lint=False, scenario_hint_cap=False, ab_control_pack=None,
+         second_seat_transport="openrouter"):
     """Run SECTION (e.g. 1. or all) as one artifact; all uses the weighted cert plan."""
     from scripts.nightly_outcome import ordinary_failure, write_result, NightlyHardStop
     if nightly_result is not None:
@@ -275,7 +286,8 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
                                                    prompt_pack=prompt_pack, ab_interleaved=ab_interleaved,
                                                    ab_experiment=ab_experiment, ab_seed=ab_seed,
                                                    plan_freshness_lint=plan_freshness_lint, scenario_hint_cap=scenario_hint_cap,
-                                                   ab_control_pack=ab_control_pack)
+                                                   ab_control_pack=ab_control_pack,
+                                                   second_seat_transport=second_seat_transport)
         artifact.parent.mkdir(parents=True, exist_ok=True)
         if not plan_only and (resume is None or write):
             url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_ROLE_KEY")

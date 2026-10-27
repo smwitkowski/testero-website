@@ -268,7 +268,11 @@ def _validate_candidate(path, payload, entry):
         v4 = payload.get("external_judge_version") == 2
         rebuilt = build_request(entry["candidate_id"], scope, question, entry["sources"], checked["options"],
                                  doc_context_chars=documentation_context_limit(payload, entry),
-                                **({"gate_version": payload.get("rules_version", 4), "argon_gate": payload.get("argon_gate", False), "execution_policy": payload.get("execution_policy")} if v4 else {"signature": QuestionQualitySignature}))
+                                **({"gate_version": payload.get("rules_version", 4),
+                                    "argon_gate": payload.get("argon_gate", False),
+                                    "execution_policy": payload.get("execution_policy"),
+                                    "second_seat_transport": payload.get("second_seat_transport", "openrouter")}
+                                   if v4 else {"signature": QuestionQualitySignature}))
         if canonical_sha256(frozen) != canonical_sha256(rebuilt):
             # Only unchanged originals may retain the exact known preceding 14-field rubric.
             # No arbitrary old schema or historical 13-field request is accepted.
@@ -305,8 +309,10 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model,
         raw = verdict_gates(raw, policy)
         base = raw
         if argon_request is not None:
-            from shared.argon_gate import evaluate_argon, MODEL
-            require_independent_models(generator_model, MODEL)
+            from shared.argon_gate import evaluate_argon, transport_for_model
+            second_seat_transport = transport_for_model(argon_request.get("model"))
+            if second_seat_transport == "openrouter":
+                require_independent_models(generator_model, argon_request["model"])
             if not isinstance(raw, dict) or set(raw) != {"blind_solver", "style", "evidence", "argon"}:
                 raise ValueError("All four gates required")
             base = {name: raw[name] for name in ("blind_solver", "style", "evidence")}
@@ -334,7 +340,11 @@ def _external_decision(question, scope, sources, evidence, raw, generator_model,
 
 def _argon_request(path, entry, payload):
     if payload.get("argon_gate") is True:
-        return _read_json(path.parent / entry["external_judge_request"]["path"])["argon"]
+        from shared.argon_gate import model_for_transport
+        request = _read_json(path.parent / entry["external_judge_request"]["path"])["argon"]
+        if request.get("model") != model_for_transport(payload.get("second_seat_transport", "openrouter")):
+            raise ValueError("Second-seat model differs from frozen artifact policy")
+        return request
     return None
 
 
@@ -690,6 +700,12 @@ def ingest(path, verdicts, *, dry_run=False, publication_bank=None,
     try:
         if "argon_gate" in payload and type(payload["argon_gate"]) is not bool:
             raise ValueError("Invalid Argon policy")
+        from shared.argon_gate import model_for_transport
+        transport = payload.get("second_seat_transport", "openrouter")
+        model_for_transport(transport)
+        if transport != "openrouter" and (payload.get("argon_gate") is not True
+                                           or payload["external_judge_version"] != 2):
+            raise ValueError("Codex second seats require a frozen council request")
         require_independent_models(payload["model"], EXTERNAL_POLICY_MODEL)
     except (KeyError, ValueError):
         raise click.ClickException("Invalid generator/judge vendor independence") from None

@@ -244,8 +244,12 @@ def _record_verdict_directory(requests, verdicts):
             raise click.ClickException("Cannot record verdict-directory registry safely") from None
 
 
-def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_gate=False, candidate_ids=(), full_gate_sample=5):
+def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_gate=False, candidate_ids=(), full_gate_sample=5, second_seat_transport="openrouter"):
     """Run a resumable locked batch, submitting at most parallel requests at once."""
+    try:
+        second_seat_model = argon.model_for_transport(second_seat_transport)
+    except ValueError as error:
+        raise click.ClickException(str(error)) from None
     if not isinstance(judge_model, str) or judge_model not in ALLOWED_MODELS:
         raise click.ClickException("Only claude or claude/claude-sonnet-5-5 is allowed by current ingestion provenance")
     if type(parallel) is not int or not 1 <= parallel <= 4:
@@ -280,10 +284,26 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
     summary = Summary(remaining=len(paths))
     stopped, submission_lock = Event(), Lock()
 
+    def run_codex_seat(name, gate, *, model):
+        # Admit each seat, not the whole blind/review bundle. A sibling can
+        # exhaust usage while this candidate is waiting for its blind output.
+        with submission_lock:
+            if stopped.is_set():
+                raise argon.ArgonNotAttempted()
+        try:
+            return argon.run_call(name, gate, model=model)
+        except cli_models.CLIUsageLimitError:
+            # Latch at the seat boundary, before unwinding or saving failures.
+            with submission_lock:
+                stopped.set()
+            raise
+
     def execute(path):
         ident = path.stem
         destination = verdicts / (ident + ".json")
-        if os.path.lexists(destination):
+        # Preserve legacy skip behavior outside council runs. Council resumes
+        # must still validate their frozen transport before skipping old output.
+        if os.path.lexists(destination) and not argon_gate and second_seat_transport == "openrouter":
             return ident, "skipped", None
         sub_call, request_sha256 = "request_validation", None
         failed_at = None
@@ -291,6 +311,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
             request, request_sha256 = _read_request(path, ident, canonical, with_digest=True)
             if ("argon" in request) != argon_gate:
                 raise RequestValidationError("Argon flag must match the frozen request policy")
+            if argon_gate and request["argon"]["model"] != second_seat_model:
+                raise RequestValidationError("Second seat transport must match the frozen request model")
             if os.path.lexists(destination):
                 return ident, "skipped", None
             # Admit each call under the same lock that latches usage stops.
@@ -344,11 +366,18 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
                 if request.get("execution_policy") in EXECUTION_POLICIES and failed_at and not sampled:
                     raw["argon"] = {"status": "skipped", "reason": "prior_gate_failed"}
                 else:
+                    # The last Claude call may have returned after a sibling
+                    # stopped the batch. Do not enter a fresh second-seat bundle.
+                    with submission_lock:
+                        if stopped.is_set():
+                            return ident, "not_attempted", None
+                    seat_options = ({"call_runner": run_codex_seat}
+                                    if second_seat_transport == "codex" else {})
                     with call_context(candidate_id=ident,
                                       attempt=1, calls_path=calls_path):
-                        raw["argon"] = (argon.run_argon(request["argon"], question=question, full_review=sampled)
+                        raw["argon"] = (argon.run_argon(request["argon"], question=question, full_review=sampled, **seat_options)
                                         if request.get("execution_policy") == BLIND_ARGON_POLICY
-                                        else argon.run_argon(request["argon"]))
+                                        else argon.run_argon(request["argon"], **seat_options))
             sub_call = "verdict_publication"
             from shared.distractor_evidence import verdict_with_policy
             raw = verdict_with_policy(raw, request.get("distractor_evidence"))
@@ -359,6 +388,8 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
             except OSError:
                 pass
             return ident, "completed", None
+        except argon.ArgonNotAttempted:
+            return ident, "not_attempted", None
         except Exception as error:
             quality_rejected = bool(failed_at)
             if isinstance(error, argon.ArgonCallError):
@@ -444,12 +475,15 @@ def run_requests(requests, verdicts, *, judge_model="claude", parallel=3, argon_
 @click.option("--verdicts", required=True, type=click.Path(path_type=Path))
 @click.option("--judge-model", default="claude", show_default=True)
 @click.option("--parallel", default=3, type=click.IntRange(1, 4), show_default=True)
-@click.option("--argon-gate", is_flag=True, help="Require and run frozen independent Gemini 4 Argon blind/full requests via OpenRouter.")
+@click.option("--argon-gate", is_flag=True, help="Require and run frozen independent second-seat blind/full requests.")
+@click.option("--second-seat-transport", type=click.Choice(["openrouter", "codex"]), default="openrouter", show_default=True)
 @click.option("--candidate-id", "candidate_ids", multiple=True, help="Retry only these frozen candidate IDs in the original directories.")
 @click.option("--full-gate-sample", default=5, type=click.IntRange(1), show_default=True)
-def main(requests, verdicts, judge_model, parallel, argon_gate, candidate_ids, full_gate_sample):
-    """Save raw Claude verdicts for frozen requests; never generate or ingest rows."""
-    summary = run_requests(requests, verdicts, judge_model=judge_model, parallel=parallel, argon_gate=argon_gate, candidate_ids=candidate_ids, full_gate_sample=full_gate_sample)
+def main(requests, verdicts, judge_model, parallel, argon_gate, candidate_ids, full_gate_sample, second_seat_transport):
+    """Save raw council verdicts for frozen requests; never generate or ingest rows."""
+    transport_options = ({"second_seat_transport": second_seat_transport}
+                         if second_seat_transport != "openrouter" else {})
+    summary = run_requests(requests, verdicts, judge_model=judge_model, parallel=parallel, argon_gate=argon_gate, candidate_ids=candidate_ids, full_gate_sample=full_gate_sample, **transport_options)
     if summary.failed or summary.usage_stopped or summary.remaining:
         raise click.exceptions.Exit(1)
 

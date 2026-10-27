@@ -22,6 +22,8 @@ import uuid
 PIPELINE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PIPELINE_ROOT))
 from shared.council_safety import CANARY_MARKER
+from shared.argon_gate import model_for_transport, transport_for_model
+from shared.council_configuration import empty_health, migrate_state, pause_path, is_paused
 from shared.cli_models import CLISchemaError
 from shared.external_judge import (build_request, candidate_question, canonical_sha256,
                                    documentation_context_limit)
@@ -111,8 +113,10 @@ def accepted_rows(payload):
         yield scope, entry, question, canonical_evidence(entry)
 
 
-def prepare(artifacts, out, *, seed=45, per_type=20, gold=False, lexicon=None):
+def prepare(artifacts, out, *, seed=45, per_type=20, gold=False, lexicon=None,
+            second_seat_transport="openrouter"):
     """Create an isolated cohort from accepted frozen artifacts; leave inputs intact."""
+    model = model_for_transport(second_seat_transport)
     if type(per_type) is not int or per_type < 1:
         raise ValueError("per_type must be positive")
     out = no_symlinks(out)
@@ -141,7 +145,8 @@ def prepare(artifacts, out, *, seed=45, per_type=20, gold=False, lexicon=None):
             "source_candidate_id": entry["candidate_id"], "defect": defect})))
         request = build_request(ident, scope, question, entry["sources"], evidence,
                                 gate_version=5, argon_gate=True, execution_policy="short_circuit_v2",
-                                doc_context_chars=documentation_context_limit(payload, entry))
+                                doc_context_chars=documentation_context_limit(payload, entry),
+                                second_seat_transport=second_seat_transport)
         frozen = {**{key: deepcopy(value) for key, value in scope.items()},
                   "index": 1, "candidate_id": ident, "stem": question["stem"],
                   "sources": deepcopy(entry["sources"]), "accepted": False,
@@ -162,7 +167,8 @@ def prepare(artifacts, out, *, seed=45, per_type=20, gold=False, lexicon=None):
     (out / "requests").mkdir()
     for request in requests:
         write_json(out / "requests" / (request["candidate_id"] + ".json"), request)
-    manifest = {"version": 1, "kind": "gold" if gold else "canaries", "seed": seed, "rows": rows}
+    manifest = {"version": 1, "kind": "gold" if gold else "canaries", "seed": seed, "rows": rows,
+                "model": model}
     write_json(out / "manifest.json", manifest)
     return {"root": str(out), "kind": manifest["kind"], "count": len(rows)}
 
@@ -189,13 +195,17 @@ def validate_observation(question, scope, request, raw):
     evaluate_argon(question, raw["argon"], request["argon"])
 
 
-def load_cohort(root):
+def load_cohort(root, *, second_seat_transport=None):
     root = no_symlinks(root)
     if not (root / CANARY_MARKER).is_file():
         raise ValueError("Missing council monitor isolation marker")
     manifest = read_json(no_symlinks(root / "manifest.json"))
     if manifest.get("version") != 1 or manifest.get("kind") not in ("canaries", "gold") or not manifest.get("rows"):
         raise ValueError("Invalid monitor manifest")
+    declared_model = manifest.get("model", model_for_transport())
+    declared_transport = transport_for_model(declared_model)
+    if second_seat_transport is not None and model_for_transport(second_seat_transport) != declared_model:
+        raise ValueError("Monitor configuration does not match selected transport")
     ids = [row["candidate_id"] for row in manifest["rows"]]
     if len(set(ids)) != len(ids) or any(str(uuid.UUID(ident)) != ident for ident in ids):
         raise ValueError("Invalid monitor candidate IDs")
@@ -204,7 +214,8 @@ def load_cohort(root):
         rebuilt = build_request(row["candidate_id"], row["scope"], row["question"],
                                 row["entry"]["sources"], canonical_evidence(row["entry"]),
                                 gate_version=5, argon_gate=True, execution_policy="short_circuit_v2",
-                                doc_context_chars=row.get("doc_context_chars"))
+                                doc_context_chars=row.get("doc_context_chars"),
+                                second_seat_transport=declared_transport)
         if (canonical_sha256(request) != row["request_sha256"] or request != rebuilt
                 or request.get("candidate_id") != row["candidate_id"]):
             raise ValueError("Frozen monitor request changed")
@@ -213,14 +224,17 @@ def load_cohort(root):
     return root, manifest
 
 
-def evaluate(root, *, state=DEFAULT_STATE, pause=None, window=20, verdicts=None):
+def evaluate(root, *, state=DEFAULT_STATE, pause=None, window=20, verdicts=None,
+             second_seat_transport="openrouter"):
     """Evaluate frozen full-council verdicts, then persist rolling health state."""
     if type(window) is not int or window < 20:
         raise ValueError("Rolling window must contain at least 20 per defect type")
-    root, manifest = load_cohort(root)
+    root, manifest = load_cohort(root, second_seat_transport=second_seat_transport)
+    model = model_for_transport(second_seat_transport)
     verdicts = no_symlinks(verdicts or root / "verdicts")
     state = no_symlinks(state)
-    pause = no_symlinks(pause or state.with_name("PIPELINE_PAUSED"))
+    base_pause = no_symlinks(pause or state.with_name("PIPELINE_PAUSED"))
+    pause = no_symlinks(pause_path(base_pause, second_seat_transport))
     observations, errors = [], []
     for row in manifest["rows"]:
         ident = row["candidate_id"]
@@ -250,9 +264,8 @@ def evaluate(root, *, state=DEFAULT_STATE, pause=None, window=20, verdicts=None)
     lock_path = no_symlinks(state.with_suffix(state.suffix + ".lock"))
     with lock_path.open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        saved = read_json(state) if state.exists() else {"version": 1, "windows": {d: [] for d in DEFECTS}, "gold": [], "seen": []}
-        if saved.get("version") != 1 or set(saved.get("windows", {})) != set(DEFECTS):
-            raise ValueError("Invalid rolling health state")
+        all_saved = migrate_state(read_json(state)) if state.exists() else {"version": 2, "configurations": {}}
+        saved = all_saved["configurations"].setdefault(model, empty_health())
         if saved.get("window", window) != window:
             raise ValueError("Rolling window changed; migrate health state explicitly")
         saved["window"] = window
@@ -288,13 +301,41 @@ def evaluate(root, *, state=DEFAULT_STATE, pause=None, window=20, verdicts=None)
             pages.append(f"gold replay incomplete: {len(observations)} of {len(manifest['rows'])} judged")
         if reasons:
             # Write pause first: a later state write failure must not permit publishing.
-            write_json(pause, {"at": datetime.now(timezone.utc).isoformat(), "reasons": reasons})
+            health_pause = pause
+            if pause == base_pause and (base_pause.exists() or base_pause.is_symlink()):
+                try:
+                    prior_pause = read_json(base_pause)
+                except (OSError, ValueError, TypeError):
+                    prior_pause = None
+                if not isinstance(prior_pause, dict) or not {"at", "reasons"} <= set(prior_pause):
+                    # Do not replace a coordinator's global/manual kill switch.
+                    health_pause = no_symlinks(base_pause.with_name(
+                        base_pause.name + "." + model.replace("/", "-")))
+            write_json(health_pause, {"at": datetime.now(timezone.utc).isoformat(), "reasons": reasons, "model": model})
         report = {"kind": manifest["kind"], "observed": len(observations), "errors": errors,
                   "canaries": rates, "gold": {"count": len(gold_rows), "pass_rate": gold_rate},
-                  "paused": pause.exists(), "pause_reasons": reasons, "pages": pages,
+                  "paused": is_paused(pause=base_pause, second_seat_transport=second_seat_transport),
+                  "model": model, "pause_reasons": reasons, "pages": pages,
                   "complete": not errors}
+        # Bootstrap receipts come from one complete cohort, not pooled partial runs.
+        cohort_rates = {d: {"count": sum(o["defect"] == d for o in observations),
+                            "catch_rate": 1 if all(not o["would_publish"] for o in observations
+                                                   if o["defect"] == d) else 0}
+                        for d in DEFECTS}
+        if not errors:
+            if (manifest["kind"] == "canaries"
+                    and all(r["count"] >= 20 and r["catch_rate"] == 1 for r in cohort_rates.values())):
+                saved.setdefault("bootstrap", {})["canaries"] = {
+                    "model": model, "complete": True, "canaries": cohort_rates,
+                    "manifest_sha256": canonical_sha256(manifest)}
+            elif manifest["kind"] == "gold":
+                cohort_gold_rate = sum(o["would_publish"] for o in observations) / len(observations)
+                saved.setdefault("bootstrap", {})["gold"] = {
+                    "model": model, "complete": True,
+                    "gold": {"count": len(observations), "pass_rate": cohort_gold_rate},
+                    "manifest_sha256": canonical_sha256(manifest)}
         saved.update(seen=sorted(seen), updated_at=datetime.now(timezone.utc).isoformat(), last_report=report)
-        write_json(state, saved)
+        write_json(state, all_saved)
         return report
 
 
@@ -330,15 +371,17 @@ def system_error_ids(root):
     return missing
 
 
-def live(root, *, coordinator_approved=False, parallel=2):
+def live(root, *, coordinator_approved=False, parallel=2, second_seat_transport="openrouter"):
     """Judge frozen health requests; retry only system failures twice at most."""
     if not coordinator_approved:
         raise ValueError("Live judging requires --coordinator-approved")
-    root, _ = load_cohort(root)
+    root, _ = load_cohort(root, second_seat_transport=second_seat_transport)
     from scripts.judge_requests import run_requests
     from scripts.run_domain_batch import retryable_judge_ids
     kwargs = {"judge_model": "claude", "parallel": parallel,
               "argon_gate": True, "full_gate_sample": 1}
+    if second_seat_transport != "openrouter":
+        kwargs["second_seat_transport"] = second_seat_transport
     summary = run_requests(root / "requests", root / "verdicts", **kwargs)
     for _ in range(2):
         if summary.persistence_failed or summary.usage_stopped or summary.remaining or not summary.failed:
@@ -387,6 +430,8 @@ def main(argv=None):
     run.add_argument("--root", required=True, type=Path)
     run.add_argument("--coordinator-approved", action="store_true")
     run.add_argument("--parallel", type=int, choices=range(1, 5), default=2)
+    for command_parser in (prep, replay, run):
+        command_parser.add_argument("--second-seat-transport", choices=("openrouter", "codex"), default="openrouter")
     args = vars(parser.parse_args(argv))
     command = args.pop("command")
     try:

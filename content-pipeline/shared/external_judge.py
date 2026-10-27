@@ -315,8 +315,10 @@ def documentation_context_limit(payload, entry=None):
 
 
 def build_request(candidate_id, scope, question, sources, evidence, *, signature=None, gate_version=5,
-                  argon_gate=False, execution_policy=None, doc_context_chars=None):
+                  argon_gate=False, execution_policy=None, doc_context_chars=None, second_seat_transport="openrouter"):
     """Keep the rubric/schema intact; trim only fetched text around verified quotes."""
+    from shared.argon_gate import model_for_transport
+    model_for_transport(second_seat_transport)
     if execution_policy is not None and execution_policy not in EXECUTION_POLICIES:
         raise ValueError("Unsupported execution policy")
     if doc_context_chars is not None and (type(doc_context_chars) is not int or doc_context_chars <= 0):
@@ -399,7 +401,8 @@ def build_request(candidate_id, scope, question, sources, evidence, *, signature
             request["argon"] = build_argon_request(
                 question, scope, context, evidence,
                 review_only=execution_policy == "short_circuit_v1",
-                version=3 if execution_policy == BLIND_ARGON_POLICY else None)
+                version=3 if execution_policy == BLIND_ARGON_POLICY else None,
+                second_seat_transport=second_seat_transport)
         if len(json.dumps(request, indent=2, ensure_ascii=False, allow_nan=False)) + 1 <= REQUEST_CHARACTER_LIMIT:
             return request
     raise ValueError("External request exceeds the character bound even with wide quote-centered excerpts")
