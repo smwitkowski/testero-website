@@ -265,12 +265,15 @@ def candidate_budget(n_questions=None, target_accepted=None, expected_yield=0.29
 @click.option("--doc-cache/--no-doc-cache", default=True, show_default=True, help="Reuse 7-day on-disk public official-document snapshots (IO only).")
 @click.option("--verify-retrieval", is_flag=True, help="Opt in to per-claim BM25 queries with adjacent spans and one evidence-missing full-doc escalation (cheap context at most about 45k estimated doc tokens; escalation uses the configured full-source budget).")
 @click.option("--verify-stable-prefix/--no-verify-stable-prefix", default=True, show_default=True, help="Reorder existing plan and verifier fields only; provider cache hits must be measured.")
+@click.option("--plan-freshness-lint", is_flag=True, help="Opt in to lifecycle/current-name re-planning before doc fetch, within the existing decision-attempt budget.")
+@click.option("--scenario-hint-cap", is_flag=True, help="Opt in to at most 3 unmapped scenario hints with at least 2 exact-objective tokens in common.")
 @click.option("--decision-attempts", type=click.IntRange(min=1, max=3), default=3, show_default=True, help="Total decision plans including initial attempt; lower caps are experimental.")
 @click.option("--argon-gate", is_flag=True, help="Freeze mandatory second-seat blind/full review requests.")
 @click.option("--second-seat-transport", type=click.Choice(["openrouter", "codex"]), default="openrouter", show_default=True)
 @click.option("--existing-questions", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Local ACTIVE/DRAFT question export for near-duplicate veto; no DB access.")
 @click.option("--section-allocation", default=None, help="Comma-separated counts in included guide section order, summing to N; pilot: 4,5,6,6,5,4. Cannot combine with scope filters.")
 @click.option("--prompt-pack", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Validated writer-only prompt pack; judges/proofs are frozen. Default: unchanged prompts.")
+@click.option("--ab-control-pack", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Explicit writer-only control pack for A vs A+card; requires --ab-interleaved. Default: unmodified control.")
 @click.option("--ab-interleaved", is_flag=True, help="Pair each objective scope into randomized control/challenger candidates; requires an even total and --prompt-pack.")
 @click.option("--ab-experiment", default=None, help="Stable experiment ID; never combine packs under one ID.")
 @click.option("--ab-seed", type=int, default=0, show_default=True, help="Choose before outcomes; randomized pair order, not model sampling.")
@@ -293,10 +296,15 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
          target_accepted=None, expected_yield=0.29, distractor_evidence="strict", plan_only=False, emit_taxonomy=False,
          doc_cache=True, verify_retrieval=False, verify_stable_prefix=True, decision_attempts=3,
          doc_context_chars=DEFAULT_DOC_CONTEXT_CHARS, frozen_plan=None, continue_quality_rejections=False, doccheck_policy="v5",
-         prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0, second_seat_transport="openrouter"):
+         prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0,
+         plan_freshness_lint=False, scenario_hint_cap=False, ab_control_pack=None,
+         second_seat_transport="openrouter"):
     retry_manifest = None
     loaded_prompt_pack = None
+    loaded_control_pack = None
     try:
+        if ab_control_pack is not None and not ab_interleaved:
+            raise ValueError("--ab-control-pack requires --ab-interleaved")
         if prompt_pack is not None:
             from shared.prompt_pack import load_pack
             loaded_prompt_pack = load_pack(prompt_pack)
@@ -308,6 +316,14 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             for key, value in expected.items():
                 if key in policy and policy[key] != value:
                     raise ValueError("Prompt pack policy differs from generator " + key)
+        if ab_control_pack is not None:
+            from shared.prompt_pack import load_pack
+            loaded_control_pack = load_pack(ab_control_pack)
+            expected = {"cert_id": cert, "doccheck_policy": doccheck_policy,
+                        "distractor_evidence": distractor_evidence}
+            for key, value in expected.items():
+                if key in loaded_control_pack["policy"] and loaded_control_pack["policy"][key] != value:
+                    raise ValueError("Control prompt pack policy differs from generator " + key)
         from shared.distractor_evidence import evidence_policy
         frozen_evidence = evidence_policy(distractor_evidence)
         if doccheck_policy not in ("v5", "v6"):
@@ -356,7 +372,9 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 from shared.prompt_pack import pack_hash
                 plan = interleave_plan(plan, experiment=ab_experiment, seed=ab_seed,
                                        pack_sha256=pack_hash(loaded_prompt_pack),
-                                       cohort=str(artifact) if artifact else datetime.now(timezone.utc).isoformat())
+                                       cohort=str(artifact) if artifact else datetime.now(timezone.utc).isoformat(),
+                                       **({"control_pack_sha256": pack_hash(loaded_control_pack)}
+                                          if loaded_control_pack is not None else {}))
         if continue_quality_rejections and judge_model != "external":
             raise ValueError("Quality-only continuation requires external generation")
     except ValueError as exc:
@@ -394,6 +412,11 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                                          "decision_attempts": decision_attempts}}
     if second_seat_transport != "openrouter":
         payload["second_seat_transport"] = second_seat_transport
+    # Absent flags leave the running Experiment A artifact and inputs unchanged.
+    if plan_freshness_lint:
+        payload["plan_freshness_lint"] = True
+    if scenario_hint_cap:
+        payload["scenario_hint_cap"] = True
     if loaded_prompt_pack is not None:
         from shared.prompt_pack import pack_hash
         payload["prompt_pack"] = {"sha256": pack_hash(loaded_prompt_pack),
@@ -405,6 +428,13 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
             "challenger_sha256": payload["prompt_pack"]["sha256"],
             "assignment": "randomized adjacent pairs within objective; frozen before outcomes",
             "generation_only": True, "planned_candidates": n_questions}
+    if loaded_control_pack is not None:
+        from shared.prompt_pack import pack_hash
+        payload["ab_control_pack"] = {"sha256": pack_hash(loaded_control_pack),
+                                      "stage": loaded_control_pack["stage"],
+                                      "source_run": loaded_control_pack["source_run"],
+                                      "policy": loaded_control_pack["policy"]}
+        payload["ab_experiment"]["control_sha256"] = payload["ab_control_pack"]["sha256"]
     if doccheck_policy == "v6":
         payload["doccheck_policy"] = doccheck_policy
     tuned = uses_pde_style(plan[0]["style_policy"])
@@ -534,7 +564,7 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 from shared.ab_experiment import generation_call
                 selected_pack = loaded_prompt_pack
                 if ab_interleaved and entry["ab_assignment"]["arm"] == "control":
-                    selected_pack = None
+                    selected_pack = loaded_control_pack
                 return generation_call(invoke, prompt_pack=selected_pack,
                     writer_functions=(invoke,) if function in (plan_decision, generate_question, cite_question) else ())
             return invoke()
@@ -551,7 +581,8 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 stage = "decision_plan"
                 with write_lock:
                     summaries = existing_scenarios(scope, bank["questions"], payload["candidates"],
-                        [decision for earlier, decision in sorted(planning_history.items()) if earlier < index])
+                        [decision for earlier, decision in sorted(planning_history.items()) if earlier < index],
+                        **({"scenario_hint_cap": True} if scenario_hint_cap else {}))
                 with call_context(stage="plan", candidate_id=entry.get("candidate_id"), index=index,
                                   attempt=decision_attempt + 1, calls_path=str(artifact) + ".calls.jsonl"):
                     decision = system_call(plan_decision, scope, model=model, difficulty=difficulty,
@@ -568,6 +599,18 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                 with write_lock:
                     planning_history[index] = decision
                 entry["decision_attempts"].append(attempt)
+                if plan_freshness_lint:
+                    from shared.product_freshness import plan_freshness_findings, plan_freshness_feedback
+                    findings = plan_freshness_findings(decision, cert)
+                    blocked = any(hit["blocking"] for hit in findings)
+                    attempt["plan_freshness_check"] = {"passed": not blocked, "findings": findings}
+                    if blocked:
+                        stage = "decision_veto"
+                        feedback = plan_freshness_feedback(findings)
+                        attempt["plan_freshness_check"]["reason"] = feedback
+                        repair_options = None
+                        previous_decision = None
+                        continue
                 if decision["engineering_decision"].casefold() in vetoed_decisions:
                     stage = "decision_veto"
                     attempt["proof"] = {"passed": False, "reason": "Replacement must change the unsupported engineering decision"}
@@ -655,6 +698,9 @@ def main(cert, n_questions, domain_code, subsection, objective_ids, model, judge
                     feedback = json.dumps({"previous_vetoes": veto_feedback,
                         "instruction": "Replace the engineering decision, not the scenario with extra exceptions. Avoid the unverifiable claim and make each distractor clearly wrong on documented tradeoffs."})
             else:
+                if plan_freshness_lint and not attempt.get("plan_freshness_check", {}).get("passed", True):
+                    raise DecisionVetoError("Plan lifecycle/name lint exhausted decision attempts; discard candidate: "
+                                            + attempt["plan_freshness_check"]["reason"])
                 raise DecisionVetoError("Replacement decision vetoed; discard candidate: " +
                     (decision_veto_reason(proof) if doccheck_policy == "v6" else proof["reason"]))
             # Objective text comes from the frozen reviewed registry, never the LM.

@@ -1,0 +1,24 @@
+{
+  "null": {
+    "trials": 2000,
+    "seed_start": 70000,
+    "effect": 0.0,
+    "reject80": 2,
+    "reject160": 59,
+    "reject_either": 59,
+    "rate80": 0.001,
+    "rate160": 0.0295,
+    "rate_either": 0.0295
+  },
+  "plus15pp": {
+    "trials": 2000,
+    "seed_start": 90000,
+    "effect": 0.15,
+    "reject80": 496,
+    "reject160": 1759,
+    "reject_either": 1761,
+    "rate80": 0.248,
+    "rate160": 0.8795,
+    "rate_either": 0.8805
+  }
+}

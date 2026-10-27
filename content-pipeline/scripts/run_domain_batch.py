@@ -73,7 +73,9 @@ def export_questions(url, key, exam, path, *, fetch=None):
 
 
 def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resume=None, doccheck_policy="v5",
-                   prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0, second_seat_transport="openrouter"):
+                   prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0,
+                   plan_freshness_lint=False, scenario_hint_cap=False, ab_control_pack=None,
+                   second_seat_transport="openrouter"):
     """Build one gated batch; ``all`` keeps the full weighted cert plan unfiltered."""
     if (section != "all" and not re.fullmatch(r"[0-9]+\.", section)
             or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", tag)):
@@ -82,6 +84,8 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
         raise ValueError("Unsupported doccheck policy")
     from shared.argon_gate import model_for_transport
     model_for_transport(second_seat_transport)
+    if ab_control_pack is not None and not ab_interleaved:
+        raise ValueError("--ab-control-pack requires --ab-interleaved")
     if ab_interleaved and (prompt_pack is None or not ab_experiment or resume is not None
                            or (section == "all" and cert == "data-engineer")):
         raise ValueError("A/B requires a challenger and experiment ID; full-plan PDE retries/resume are not supported")
@@ -114,6 +118,15 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
             raise ValueError("Doccheck policy differs from saved batch")
         if saved.get("second_seat_transport", "openrouter") != second_seat_transport:
             raise ValueError("Second-seat transport differs from saved batch")
+        control_hash = None
+        if ab_control_pack is not None:
+            from shared.prompt_pack import load_pack, pack_hash
+            control_hash = pack_hash(load_pack(ab_control_pack))
+        if saved.get("ab_control_pack", {}).get("sha256") != control_hash:
+            raise ValueError("Control prompt pack differs from saved batch")
+        if any(saved.get(key, False) != value for key, value in (
+                ("plan_freshness_lint", plan_freshness_lint), ("scenario_hint_cap", scenario_hint_cap))):
+            raise ValueError("Planner experiment flags differ from saved batch")
         count = len(saved["plan"])
         base = artifact.with_suffix("")
     else:
@@ -137,12 +150,18 @@ def batch_commands(section, tag, cert, count, parallel, *, plan_only=False, resu
         generate += ["--second-seat-transport", second_seat_transport]
     if prompt_pack is not None:
         generate += ["--prompt-pack", str(prompt_pack)]
+    if ab_control_pack is not None:
+        generate += ["--ab-control-pack", str(ab_control_pack)]
     if ab_interleaved:
         if count % 2:
             raise ValueError("A/B candidate count must be even")
         generate += ["--ab-interleaved", "--ab-experiment", ab_experiment, "--ab-seed", str(ab_seed)]
     if doccheck_policy == "v6":
         generate += ["--doccheck-policy", doccheck_policy]
+    if plan_freshness_lint:
+        generate += ["--plan-freshness-lint"]
+    if scenario_hint_cap:
+        generate += ["--scenario-hint-cap"]
     if domain is not None:
         for objective in domain["objectives"]:
             generate += ["--objective", objective["objective_id"]]
@@ -226,9 +245,12 @@ def judge_with_system_retries(command, execute):
 @click.option("--count", type=click.IntRange(min=1), default=None, envvar="N",
               help="Total candidates: 40 for all sections, 30 for a single section (overridden by N).")
 @click.option("--prompt-pack", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Writer-only challenger pack.")
+@click.option("--ab-control-pack", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Explicit writer-only control pack; requires --ab-interleaved.")
 @click.option("--ab-interleaved", is_flag=True, help="Randomized objective-paired control/challenger generation.")
 @click.option("--ab-experiment", default=None)
 @click.option("--ab-seed", type=int, default=0, show_default=True)
+@click.option("--plan-freshness-lint", is_flag=True, help="Opt in to bounded lifecycle/name re-planning before docs.")
+@click.option("--scenario-hint-cap", is_flag=True, help="Opt in to at most 3 relevant unmapped scenario hints.")
 @click.option("--doccheck-policy", type=click.Choice(["v5", "v6"]), default="v5", show_default=True, help="Freeze decision documentation policy; council remains unchanged.")
 @click.option("--second-seat-transport", type=click.Choice(["openrouter", "codex"]), default="openrouter", show_default=True)
 @click.option("--parallel", type=click.IntRange(1, 4), default=3, envvar="PARALLEL", show_default=True)
@@ -245,7 +267,9 @@ def judge_with_system_retries(command, execute):
               help="Coordinator authorization for resume DRAFT writes; resume is dry admission without this flag.")
 def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
          acknowledge_saved_system_failures, write, nightly_result, doccheck_policy="v5",
-         prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0, second_seat_transport="openrouter"):
+         prompt_pack=None, ab_interleaved=False, ab_experiment=None, ab_seed=0,
+         plan_freshness_lint=False, scenario_hint_cap=False, ab_control_pack=None,
+         second_seat_transport="openrouter"):
     """Run SECTION (e.g. 1. or all) as one artifact; all uses the weighted cert plan."""
     from scripts.nightly_outcome import ordinary_failure, write_result, NightlyHardStop
     if nightly_result is not None:
@@ -261,6 +285,8 @@ def main(section, tag, cert, count, parallel, retry_attempts, plan_only, resume,
                                                    plan_only=plan_only, resume=resume, doccheck_policy=doccheck_policy,
                                                    prompt_pack=prompt_pack, ab_interleaved=ab_interleaved,
                                                    ab_experiment=ab_experiment, ab_seed=ab_seed,
+                                                   plan_freshness_lint=plan_freshness_lint, scenario_hint_cap=scenario_hint_cap,
+                                                   ab_control_pack=ab_control_pack,
                                                    second_seat_transport=second_seat_transport)
         artifact.parent.mkdir(parents=True, exist_ok=True)
         if not plan_only and (resume is None or write):
