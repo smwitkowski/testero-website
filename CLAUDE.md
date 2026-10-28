@@ -12,6 +12,10 @@ decisions before product changes. Agents may read `hq/` including
   needs founder approval (D-005).
 - Keep commits small, with explicit owned paths.
 - One worker per worktree; never edit another worktree.
+- This repo is public. Evidence (logs, screenshots, verification JSON, PR
+  text, handoffs) goes in the PR body or `../hq/drafts/<task>/evidence/`,
+  never in the repo. Commit only minimal test fixtures, never batch or
+  calibration artifacts.
 
 ## Safety
 
@@ -23,6 +27,18 @@ decisions before product changes. Agents may read `hq/` including
 - Preserve `content-pipeline/` (active question generator) and the original
   blog blobs used by hash-locked editorial versions.
 - Stay at <=25 direct runtime dependencies.
+
+## Shared local resources
+
+Local Supabase and port 3000 are shared by every worktree. Before `qa:local`,
+`test:db:local`, `test:e2e:local`, `supabase db reset --local` or a server on
+:3000, take the lease in the foreground:
+`until mkdir ~/.cache/testero-qa-lease 2>/dev/null; do sleep 120; done; echo <worker> > ~/.cache/testero-qa-lease/owner`.
+Release it (`rm -rf ~/.cache/testero-qa-lease`) as soon as the run ends. Never
+end your turn while holding it, and never stop a process you didn't start.
+Checks that don't need the database use a production build on another port
+(for example 3102) and no lease. Don't negotiate the lease with other workers;
+if it's held for long, ask the coordinator under Open questions.
 
 ## Architecture
 
@@ -48,6 +64,17 @@ npm test`, `npm run lint`, `npm run typecheck`, and `docker build .`. Use
 `npm run test:db:local` / `npm run test:e2e:local` when touching DB or flows.
 Do not infer live Stripe/cloud validation from fixtures. Generate database
 types from local v2 only.
+
+- Fresh worktree: run `npm ci` before any gate.
+- `content-pipeline/` is Python: `cd content-pipeline && env -i PATH="$PATH"
+  HOME="$HOME" uv run pytest -q`. The repo root is the Node app; pytest there
+  fails.
+- Run browser suites (`qa:local`, `test:e2e:local`) against a production build
+  or after `rm -rf .next`; the dev route cache goes stale and serves framework
+  404s.
+- Known load-sensitive timeouts: account/billing and auth/practice e2e. Before
+  calling a failure pre-existing, run the same command on a clean `origin/main`
+  worktree and put both outputs in the PR.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
